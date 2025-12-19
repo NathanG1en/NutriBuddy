@@ -2,6 +2,9 @@
 <img width="3020" height="1588" alt="image" src="https://github.com/user-attachments/assets/cc691613-d3ac-4cca-9980-9d73e4b3ba48" />
 
 
+### Creating Nutrition Label
+<img width="3022" height="1708" alt="image" src="https://github.com/user-attachments/assets/d103b0eb-3459-413b-a712-d98c6e24ae26" />
+
 
 ```
 main.py
