@@ -1,141 +1,145 @@
 # backend/agent/tools.py
-"""
-Agent tools - thin wrappers that delegate to services.
+"""LangChain tools - thin wrappers around services."""
 
-For now, these return mock data. Replace with real service calls later.
-"""
-
+import json
+from datetime import datetime
 from langchain_core.tools import tool
+from backend.services.nutrition import NutritionService
+from backend.services.labels import LabelService
 
+# Lazy init
+_nutrition_service: NutritionService | None = None
+_label_service: LabelService | None = None
+
+
+def _get_nutrition_service() -> NutritionService:
+    global _nutrition_service
+    if _nutrition_service is None:
+        _nutrition_service = NutritionService()
+    return _nutrition_service
+
+
+def _get_label_service() -> LabelService:
+    global _label_service
+    if _label_service is None:
+        _label_service = LabelService()
+    return _label_service
+
+
+# ============================================
+# Nutrition Tools
+# ============================================
 
 @tool
 def search_foods(query: str) -> str:
     """
-    Search for foods in the USDA database.
-
+    Search for a food in the USDA database.
+    
     Args:
         query: Food name to search for (e.g., "avocado", "chicken breast")
-
+    
     Returns:
-        JSON with matching foods and their FDC IDs
+        JSON with the best matching food and its FDC ID
     """
-    # TODO: Replace with real service call
-    # service = get_nutrition_service()
-    # return service.search(query)
-
-    import json
-
-    # Mock response for now
-    mock_results = {
-        "query": query,
-        "results": [
-            {"fdc_id": "123456", "description": f"{query.title()}, raw", "brand": "Generic"},
-            {"fdc_id": "123457", "description": f"{query.title()}, cooked", "brand": "Generic"},
-        ]
-    }
-    return json.dumps(mock_results, indent=2)
+    result = _get_nutrition_service().search(query)
+    if result:
+        return json.dumps({
+            "fdc_id": result.get("fdcId"),
+            "description": result.get("description"),
+            "brand": result.get("brandOwner", "Generic")
+        }, indent=2)
+    return json.dumps({"error": "No results found"})
 
 
 @tool
 def get_nutrition(fdc_id: str) -> str:
     """
-    Get detailed nutrition data for a food by its FDC ID.
-
+    Get nutrition data for a food by its FDC ID.
+    
     Args:
-        fdc_id: The FDC ID from search results (e.g., "123456")
-
+        fdc_id: The FDC ID from search results
+    
     Returns:
         JSON with nutrition facts (calories, protein, carbs, fat, etc.)
     """
-    # TODO: Replace with real service call
+    result = _get_nutrition_service().get_nutrition(int(fdc_id))
+    if result:
+        return json.dumps(result, indent=2)
+    return json.dumps({"error": "Food not found"})
 
-    import json
 
-    # Mock response
-    mock_nutrition = {
-        "fdc_id": fdc_id,
-        "description": "Sample Food",
-        "serving_size": "100g",
-        "nutrients": {
-            "calories": 150,
-            "protein_g": 12.5,
-            "carbs_g": 8.2,
-            "fat_g": 9.1,
-            "fiber_g": 2.3,
-            "sodium_mg": 45
-        }
-    }
-    return json.dumps(mock_nutrition, indent=2)
+# ============================================
+# Label Tools
+# ============================================
+
+@tool
+def format_nutrition_label(nutrition_json: str, food_name: str) -> str:
+    """
+    Create a text-based nutrition label.
+    
+    Args:
+        nutrition_json: JSON string with nutrition data from get_nutrition
+        food_name: Name of the food for the label header
+    
+    Returns:
+        Formatted text nutrition label
+    """
+    try:
+        data = json.loads(nutrition_json)
+        if isinstance(data, list):
+            data = data[0]
+        return _get_label_service().format_text(data, food_name)
+    except Exception as e:
+        return f"Error creating label: {e}"
 
 
 @tool
-def compare_nutrients(fdc_ids: str, nutrient: str) -> str:
+def generate_label_image(nutrition_json: str, food_name: str) -> str:
     """
-    Compare a specific nutrient across multiple foods.
-
+    Generate a visual FDA-style nutrition label image.
+    
     Args:
-        fdc_ids: Comma-separated FDC IDs (e.g., "123456,789012")
-        nutrient: Nutrient to compare (e.g., "protein", "calories", "fat")
-
+        nutrition_json: JSON string with nutrition data from get_nutrition
+        food_name: Name of the food for the label
+    
     Returns:
-        Comparison table showing the nutrient for each food
+        Confirmation message with filename. Image is saved and can be accessed via API.
     """
-    # TODO: Replace with real service call
+    try:
+        data = json.loads(nutrition_json)
+        if isinstance(data, list):
+            data = data[0]
+        
+        # Generate image bytes
+        image_bytes = _get_label_service().generate_image(data, food_name)
+        
+        # Save locally (API will serve it)
+        from pathlib import Path
+        labels_dir = Path(__file__).parent.parent / "data" / "labels"
+        labels_dir.mkdir(parents=True, exist_ok=True)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_name = "".join(c if c.isalnum() else "_" for c in food_name)[:30]
+        filename = f"{safe_name}_{timestamp}.png"
+        
+        filepath = labels_dir / filename
+        filepath.write_bytes(image_bytes)
+        
+        return f"✅ Nutrition label saved as '{filename}'. Access at /labels/{filename}"
+        
+    except Exception as e:
+        return f"Error generating image: {e}"
 
-    import json
 
-    ids = [id.strip() for id in fdc_ids.split(",")]
-
-    # Mock comparison
-    comparison = {
-        "nutrient": nutrient,
-        "comparison": [
-            {"fdc_id": id, "food": f"Food {id}", nutrient: f"{10 + i * 5}g"}
-            for i, id in enumerate(ids)
-        ]
-    }
-    return json.dumps(comparison, indent=2)
-
-
-@tool
-def generate_label(food_name: str, calories: int, protein: float, carbs: float, fat: float) -> str:
-    """
-    Generate a nutrition label for a food item.
-
-    Args:
-        food_name: Name of the food
-        calories: Calories per serving
-        protein: Protein in grams
-        carbs: Carbohydrates in grams
-        fat: Fat in grams
-
-    Returns:
-        Path to the generated label image or formatted text label
-    """
-    # TODO: Replace with real label generation
-
-    label = f"""
-╔══════════════════════════════╗
-║      NUTRITION FACTS         ║
-╠══════════════════════════════╣
-║  {food_name[:26]:<26}  ║
-╠══════════════════════════════╣
-║  Serving Size: 100g          ║
-╠══════════════════════════════╣
-║  Calories: {calories:<18} ║
-║  Total Fat: {fat:.1f}g{'':<14} ║
-║  Total Carbs: {carbs:.1f}g{'':<11} ║
-║  Protein: {protein:.1f}g{'':<14} ║
-╚══════════════════════════════╝
-"""
-    return label
-
+# ============================================
+# Export all tools
+# ============================================
 
 def get_all_tools() -> list:
     """Return all available tools."""
     return [
         search_foods,
         get_nutrition,
-        compare_nutrients,
-        generate_label
+        format_nutrition_label,
+        generate_label_image,
     ]
