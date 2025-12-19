@@ -1,3 +1,7 @@
+## Welcome to NutriBuddy!
+<img width="3020" height="1588" alt="image" src="https://github.com/user-attachments/assets/cc691613-d3ac-4cca-9980-9d73e4b3ba48" />
+
+
 
 ```
 main.py
