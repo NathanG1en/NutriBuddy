@@ -68,6 +68,38 @@ def get_nutrition(fdc_id: str) -> str:
     return json.dumps({"error": "Food not found"})
 
 
+@tool
+def calculate_recipe_nutrition(ingredients_json: str) -> str:
+    """
+    Calculate combined nutrition for a recipe with multiple ingredients.
+    
+    Args:
+        ingredients_json: JSON array of ingredients, e.g.:
+            [{"name": "eggs", "quantity": 2}, {"name": "flour", "quantity": 1}]
+        recipe_name: Name of the recipe
+    
+    Returns:
+        JSON with total nutrition and per-ingredient breakdown
+    """
+    try:
+        ingredients = json.loads(ingredients_json)
+        result = _get_nutrition_service().calculate_recipe(ingredients)
+        
+        # Add export-friendly format
+        result["exportable"] = {
+            "ingredients": [
+                {"name": ing["name"], "grams": ing["grams"]}
+                for ing in result["ingredients"]
+                if "error" not in ing
+            ],
+            "totals": result["recipe_totals"]
+        }
+        
+        return json.dumps(result, indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
 # ============================================
 # Label Tools
 # ============================================
@@ -140,6 +172,7 @@ def get_all_tools() -> list:
     return [
         search_foods,
         get_nutrition,
+        calculate_recipe_nutrition,
         format_nutrition_label,
         generate_label_image,
     ]

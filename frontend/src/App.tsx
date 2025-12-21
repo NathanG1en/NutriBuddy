@@ -63,7 +63,7 @@ function App() {
         <nav className="nav-bar">
           <div className="logo">
             <div className="logo-icon">🥑</div>
-            <span>NutriAgent</span>
+            <span>NutriBuddy</span>
           </div>
           <div className="nav-links">
             <a className="nav-link">About</a>

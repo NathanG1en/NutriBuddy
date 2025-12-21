@@ -162,3 +162,127 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("backend.api.main:app", host="0.0.0.0", port=8000, reload=True)
+
+# ============================================
+# Recipe Builder Models
+# ============================================
+
+class Ingredient(BaseModel):
+    name: str
+    grams: float
+    fdc_id: Optional[int] = None  # If already resolved
+
+
+class RecipeRequest(BaseModel):
+    recipe_name: str
+    ingredients: list[Ingredient]
+    serving_size_grams: float = 100
+    servings_per_container: int = 1
+
+
+class RecipeNutrition(BaseModel):
+    recipe_name: str
+    serving_size: str
+    servings: int
+    totals: dict  # Full recipe totals
+    per_serving: dict  # Scaled to serving size
+    ingredients: list[dict]  # Per-ingredient breakdown
+
+
+class LabelRequest(BaseModel):
+    recipe_name: str
+    nutrition: dict  # Can be per_serving from RecipeNutrition
+    serving_size: str = "100g"
+    servings: int = 1
+
+
+# ============================================
+# Recipe Builder Endpoints
+# ============================================
+
+@app.post("/api/recipe/calculate", response_model=RecipeNutrition)
+async def calculate_recipe(request: RecipeRequest):
+    """
+    Calculate nutrition for a recipe. 
+    Used by the manual recipe builder for live preview.
+    """
+    from backend.services.nutrition import NutritionService
+    
+    service = NutritionService()
+    
+    # Convert to format expected by service
+    ingredients = [{"name": i.name, "grams": i.grams} for i in request.ingredients]
+    result = service.calculate_recipe(ingredients)
+    
+    # Calculate per-serving values
+    total_grams = sum(i.grams for i in request.ingredients)
+    scale = request.serving_size_grams / total_grams if total_grams > 0 else 1
+    
+    per_serving = {}
+    for key, value in result["recipe_totals"].items():
+        per_serving[key] = round(value * scale, 2)
+    
+    return RecipeNutrition(
+        recipe_name=request.recipe_name,
+        serving_size=f"{request.serving_size_grams}g",
+        servings=request.servings_per_container,
+        totals=result["recipe_totals"],
+        per_serving=per_serving,
+        ingredients=result["ingredients"]
+    )
+
+
+@app.post("/api/recipe/label")
+async def generate_recipe_label(request: LabelRequest):
+    """
+    Generate a nutrition label image for a recipe.
+    Returns the image URL.
+    """
+    from backend.services.labels import LabelService, LabelLayoutConfig
+    from pathlib import Path
+    from datetime import datetime
+    
+    # Create label with custom serving info
+    layout = LabelLayoutConfig(
+        serving_size=request.serving_size,
+        servings_per_container=request.servings,
+    )
+    
+    service = LabelService(layout=layout)
+    image_bytes = service.generate_image(request.nutrition, request.recipe_name)
+    
+    # Save image
+    labels_dir = Path(__file__).parent.parent / "data" / "labels"
+    labels_dir.mkdir(parents=True, exist_ok=True)
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_name = "".join(c if c.isalnum() else "_" for c in request.recipe_name)[:30]
+    filename = f"{safe_name}_{timestamp}.png"
+    
+    filepath = labels_dir / filename
+    filepath.write_bytes(image_bytes)
+    
+    return {
+        "filename": filename,
+        "url": f"http://localhost:8000/labels/{filename}",
+        "recipe_name": request.recipe_name
+    }
+
+
+@app.get("/api/food/search")
+async def search_food(query: str):
+    """
+    Search for a food item. Used by recipe builder autocomplete.
+    """
+    from backend.services.nutrition import NutritionService
+    
+    service = NutritionService()
+    result = service.search(query)
+    
+    if result:
+        return {
+            "fdc_id": result.get("fdcId"),
+            "description": result.get("description"),
+            "brand": result.get("brandOwner", "Generic")
+        }
+    return {"error": "No results found"}
