@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-from backend.api.routes import chat, recipe, health
+from backend.api.routes import chat, recipe, health, voice, rag
 
 
 app = FastAPI(
@@ -37,6 +37,8 @@ app.mount("/labels", StaticFiles(directory=str(labels_dir)), name="labels")
 app.include_router(health.router, tags=["Health"])
 app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(recipe.router, prefix="/api/recipe", tags=["Recipe"])
+app.include_router(voice.router, prefix="/api", tags=["Voice"])
+app.include_router(rag.router, prefix="/api/rag", tags=["RAG"])
 
 
 if __name__ == "__main__":
