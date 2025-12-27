@@ -25,6 +25,7 @@ function AppContent() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [threadId] = useState(`user-${Math.random().toString(36).substr(2, 9)}`)
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true)
 
   if (authLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>
@@ -61,7 +62,7 @@ function AppContent() {
       }])
 
       // Speak the response
-      if (data.response) {
+      if (data.response && isVoiceEnabled) {
         speak(data.response)
       }
 
@@ -99,6 +100,13 @@ function AppContent() {
             <span>NutriBuddy</span>
           </div>
           <div className="nav-links">
+            <button
+              className={`voice-toggle-btn ${isVoiceEnabled ? 'active' : 'muted'}`}
+              onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
+              title={isVoiceEnabled ? "Mute Voice" : "Enable Voice"}
+            >
+              {isVoiceEnabled ? '🔊' : '🔇'}
+            </button>
             <div className="nav-user-info">
               <span className="user-greeting">Hi, {currentUser.displayName?.split(' ')[0]}</span>
               <button onClick={logout} className="logout-btn">Logout</button>
