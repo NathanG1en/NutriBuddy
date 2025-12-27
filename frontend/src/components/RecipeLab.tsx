@@ -18,7 +18,11 @@ interface Recipe {
     science_notes: string;
 }
 
-export const RecipeLab: React.FC = () => {
+interface RecipeLabProps {
+    onAnalyze?: (data: any) => void;
+}
+
+export const RecipeLab: React.FC<RecipeLabProps> = ({ onAnalyze }) => {
     const { currentUser } = useAuth();
     const [prompt, setPrompt] = useState('');
     const [recipe, setRecipe] = useState<Recipe | null>(null);
@@ -27,6 +31,7 @@ export const RecipeLab: React.FC = () => {
     const [uploadStatus, setUploadStatus] = useState('');
     const [savedRecipes, setSavedRecipes] = useState<any[]>([]);
     const [saving, setSaving] = useState(false);
+    const [analyzing, setAnalyzing] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { isListening, transcript, startListening, isSupported } = useSpeechRecognition();
 
@@ -145,6 +150,43 @@ export const RecipeLab: React.FC = () => {
         }
     };
 
+    const analyzeRecipe = async () => {
+        if (!recipe || !currentUser) return;
+        setAnalyzing(true);
+        try {
+            const ingredients = recipe.ingredients.map(i => `${i.quantity} ${i.unit} ${i.item}`);
+            const res = await fetch('http://localhost:8000/api/labels/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${await currentUser.getIdToken()}`
+                },
+                body: JSON.stringify({
+                    recipe_name: recipe.title,
+                    ingredients: ingredients
+                })
+            });
+            if (!res.ok) throw new Error("Analysis failed");
+            const data = await res.json();
+
+            // Navigate to Label Builder with data
+            if (onAnalyze && data.ingredients) {
+                // Enhance data with recipe name
+                onAnalyze({
+                    name: recipe.title,
+                    ingredients: data.ingredients
+                });
+            } else {
+                alert("Could not extract ingredients for Label Builder.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Failed to create label: " + e);
+        } finally {
+            setAnalyzing(false);
+        }
+    };
+
     const loadRecipe = (r: any) => {
         setRecipe(r);
     };
@@ -256,9 +298,14 @@ export const RecipeLab: React.FC = () => {
                         <div className="recipe-header">
                             <div className="header-actions">
                                 <h1>{recipe.title}</h1>
-                                <button onClick={saveRecipe} disabled={saving} className="save-btn">
-                                    {saving ? 'Saving...' : '💾 Save'}
-                                </button>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <button onClick={analyzeRecipe} disabled={analyzing} className="analyze-btn">
+                                        {analyzing ? '🔬 Analyzing...' : '🏷️ Create Label'}
+                                    </button>
+                                    <button onClick={saveRecipe} disabled={saving} className="save-btn">
+                                        {saving ? 'Saving...' : '💾 Save'}
+                                    </button>
+                                </div>
                             </div>
                             <p className="recipe-desc">{recipe.description}</p>
                         </div>
@@ -294,6 +341,7 @@ export const RecipeLab: React.FC = () => {
                     </div>
                 )}
             </div>
+
         </div>
     );
 };

@@ -81,6 +81,14 @@ function AppContent() {
     '🥛 Find organic whole milk and show nutrition facts'
   ]
 
+  // Shared state for Label Builder
+  const [initialLabelData, setInitialLabelData] = useState<any>(null)
+
+  const handleAnalyzeRecipe = (data: any) => {
+    setInitialLabelData(data)
+    setActiveTab('label')
+  }
+
   return (
     <div className="app">
       <div className="main-container">
@@ -187,9 +195,9 @@ function AppContent() {
             </div>
           </>
         ) : activeTab === 'label' ? (
-          <LabelBuilder />
+          <LabelBuilder initialData={initialLabelData} />
         ) : (
-          <RecipeLab />
+          <RecipeLab onAnalyze={handleAnalyzeRecipe} />
         )}
       </div>
     </div>
