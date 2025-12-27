@@ -98,6 +98,40 @@
     cursor: not-allowed;
 }
 
+/* Saved List Styles */
+.saved-list {
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.saved-item {
+    background: white;
+    border: 2px solid #3d3d2e;
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.saved-item:hover {
+    background: #e8e5c8;
+    transform: translateX(2px);
+}
+
+.saved-title {
+    display: block;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.saved-date {
+    font-size: 12px;
+    color: #666;
+}
+
 /* Output Styles */
 .placeholder-state,
 .loading-state {
@@ -136,10 +170,32 @@
     margin-bottom: 20px;
 }
 
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
 .recipe-header h1 {
     font-size: 32px;
     color: #3d3d2e;
-    margin-bottom: 10px;
+    margin: 0;
+}
+
+.save-btn {
+    background: #ffd60a;
+    border: 2px solid #3d3d2e;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 #3d3d2e;
+}
+
+.save-btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 3px 3px 0 #3d3d2e;
 }
 
 .recipe-desc {
@@ -166,6 +222,13 @@
     gap: 30px;
 }
 
+.recipe-body h3 {
+    color: #3d3d2e;
+    border-bottom: 2px solid #e8e5c8;
+    padding-bottom: 5px;
+    margin-bottom: 15px;
+}
+
 .ingredients-list ul {
     list-style: none;
     padding: 0;
@@ -177,6 +240,8 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    color: #3d3d2e;
+    /* Explicit dark color */
 }
 
 .ingredients-list .qty {
@@ -186,6 +251,8 @@
 
 .instructions-list ol {
     padding-left: 20px;
+    color: #3d3d2e;
+    /* Explicit dark color */
 }
 
 .instructions-list li {

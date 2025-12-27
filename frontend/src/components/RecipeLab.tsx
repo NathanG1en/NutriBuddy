@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 import './RecipeLab.css';
 
 interface Ingredient {
@@ -24,7 +25,36 @@ export const RecipeLab: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState('');
+    const [savedRecipes, setSavedRecipes] = useState<any[]>([]);
+    const [saving, setSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { isListening, transcript, startListening, isSupported } = useSpeechRecognition();
+
+    useEffect(() => {
+        if (transcript) {
+            setPrompt(prev => prev + (prev ? ' ' : '') + transcript);
+        }
+    }, [transcript]);
+
+    // Fetch saved recipes on load
+    React.useEffect(() => {
+        if (currentUser) {
+            fetchSavedRecipes();
+        }
+    }, [currentUser]);
+
+    const fetchSavedRecipes = async () => {
+        try {
+            const token = await currentUser?.getIdToken();
+            const res = await fetch('http://localhost:8000/api/recipes', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            setSavedRecipes(data);
+        } catch (e) {
+            console.error("Error fetching recipes:", e);
+        }
+    };
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -93,6 +123,32 @@ export const RecipeLab: React.FC = () => {
         }
     };
 
+    const saveRecipe = async () => {
+        if (!recipe || !currentUser) return;
+        setSaving(true);
+        try {
+            await fetch('http://localhost:8000/api/recipes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${await currentUser.getIdToken()}`
+                },
+                body: JSON.stringify(recipe)
+            });
+            fetchSavedRecipes(); // Refresh list
+            alert("Recipe saved!");
+        } catch (e) {
+            console.error(e);
+            alert("Failed to save.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const loadRecipe = (r: any) => {
+        setRecipe(r);
+    };
+
     const clearKnowledge = async () => {
         if (!currentUser) return;
         if (!confirm("Are you sure? This will delete all uploaded documents.")) return;
@@ -110,7 +166,7 @@ export const RecipeLab: React.FC = () => {
 
     return (
         <div className="recipe-lab-container">
-            {/* Left Panel: Controls */}
+            {/* Left Panel: Controls & Saved Items */}
             <div className="lab-controls">
                 <div className="section-header">
                     <h2>🧪 Recipe Lab</h2>
@@ -137,12 +193,23 @@ export const RecipeLab: React.FC = () => {
 
                 <div className="generate-section card">
                     <h3>2. Create Recipe</h3>
-                    <textarea
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        placeholder="e.g., Create a sourdough bread recipe using the uploaded hydration techniques..."
-                        disabled={loading}
-                    />
+                    <div className="input-wrapper">
+                        <textarea
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            placeholder="e.g., Create a sourdough bread recipe using the uploaded hydration techniques..."
+                            disabled={loading}
+                        />
+                        {isSupported && (
+                            <button
+                                className={`mic-btn ${isListening ? 'listening' : ''}`}
+                                onClick={startListening}
+                                title="Speak to add text"
+                            >
+                                {isListening ? '🔴' : '🎤'}
+                            </button>
+                        )}
+                    </div>
                     <button
                         className="generate-btn"
                         onClick={generateRecipe}
@@ -151,6 +218,21 @@ export const RecipeLab: React.FC = () => {
                         {loading ? '⚗️ Distilling...' : '✨ Generate Recipe'}
                     </button>
                 </div>
+
+                {/* Saved Recipes List */}
+                <div className="saved-list-section card">
+                    <h3>📚 Saved Recipes</h3>
+                    <div className="saved-list">
+                        {!Array.isArray(savedRecipes) || savedRecipes.length === 0 ? <p className="hint">No saved recipes yet.</p> :
+                            savedRecipes.map((r, i) => (
+                                <div key={r.id || i} className="saved-item" onClick={() => loadRecipe(r)}>
+                                    <span className="saved-title">{r.title}</span>
+                                    <span className="saved-date">{new Date(r.created_at).toLocaleDateString()}</span>
+                                </div>
+                            ))
+                        }
+                    </div>
+                </div>
             </div>
 
             {/* Right Panel: Recipe Output */}
@@ -158,7 +240,7 @@ export const RecipeLab: React.FC = () => {
                 {!recipe && !loading && (
                     <div className="placeholder-state">
                         <div className="placeholder-icon">📋</div>
-                        <p>Your generated recipe will appear here.</p>
+                        <p>Select a saved recipe or generate a new one.</p>
                     </div>
                 )}
 
@@ -172,7 +254,12 @@ export const RecipeLab: React.FC = () => {
                 {recipe && (
                     <div className="recipe-card-full">
                         <div className="recipe-header">
-                            <h1>{recipe.title}</h1>
+                            <div className="header-actions">
+                                <h1>{recipe.title}</h1>
+                                <button onClick={saveRecipe} disabled={saving} className="save-btn">
+                                    {saving ? 'Saving...' : '💾 Save'}
+                                </button>
+                            </div>
                             <p className="recipe-desc">{recipe.description}</p>
                         </div>
 

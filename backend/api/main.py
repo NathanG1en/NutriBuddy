@@ -6,13 +6,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
-from backend.api.routes import chat, recipe, health, voice, rag
+from backend.api.routes import chat, recipe, health, voice, rag, recipes
 
 
 app = FastAPI(
     title="Nutrition Agent API",
     description="AI-powered nutrition label generation API",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # CORS
@@ -39,8 +39,10 @@ app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(recipe.router, prefix="/api/recipe", tags=["Recipe"])
 app.include_router(voice.router, prefix="/api", tags=["Voice"])
 app.include_router(rag.router, prefix="/api/rag", tags=["RAG"])
+app.include_router(recipes.router, prefix="/api/recipes", tags=["Saved Recipes"])
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("backend.api.main:app", host="0.0.0.0", port=8000, reload=True)
