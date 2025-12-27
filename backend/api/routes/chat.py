@@ -6,6 +6,7 @@ import re
 from backend.api.schemas.chat import ChatRequest, ChatResponse
 from backend.dependencies import get_agent
 from backend.agent.graph import NutritionAgent
+from backend.api.security import get_current_user
 
 router = APIRouter()
 
@@ -21,7 +22,8 @@ def extract_image_path(text: str) -> str | None:
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
         request: ChatRequest,
-        agent: NutritionAgent = Depends(get_agent)
+        agent: NutritionAgent = Depends(get_agent),
+        current_user: dict = Depends(get_current_user)
 ):
     """Send a message to the nutrition agent."""
     try:

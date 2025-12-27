@@ -19,4 +19,4 @@ def get_label_service() -> LabelService:
 
 @lru_cache
 def get_agent() -> NutritionAgent:
-    return NutritionAgent()  # ← Changed from create_agent()
+    return NutritionAgent()

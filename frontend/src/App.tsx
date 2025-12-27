@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import './App.css'
 import { LabelBuilder } from './components/LabelBuilder'
+import { AuthProvider, useAuth } from './context/AuthContext'
+import { Login } from './components/Login'
+import { useVoice } from './hooks/useVoice'
+import { RecipeLab } from './components/RecipeLab'
 
 interface Message {
   type: string
@@ -8,8 +12,10 @@ interface Message {
   imagePath?: string
 }
 
-function App() {
-  const [activeTab, setActiveTab] = useState<'chat' | 'label'>('chat')
+function AppContent() {
+  const { currentUser, loading: authLoading, logout } = useAuth()
+  const { speak } = useVoice()
+  const [activeTab, setActiveTab] = useState<'chat' | 'label' | 'recipe'>('chat')
   const [messages, setMessages] = useState<Message[]>([
     {
       type: 'ai',
@@ -19,6 +25,14 @@ function App() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [threadId] = useState(`user-${Math.random().toString(36).substr(2, 9)}`)
+
+  if (authLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
+  }
+
+  if (!currentUser) {
+    return <Login />
+  }
 
   const sendMessage = async (message = input) => {
     if (!message.trim()) return
@@ -31,7 +45,10 @@ function App() {
     try {
       const response = await fetch('http://localhost:8000/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${await currentUser.getIdToken()}`
+        },
         body: JSON.stringify({ message, thread_id: threadId })
       })
 
@@ -42,6 +59,12 @@ function App() {
         content: data.response,
         imagePath: data.image_path
       }])
+
+      // Speak the response
+      if (data.response) {
+        speak(data.response)
+      }
+
     } catch (error) {
       setMessages(prev => [...prev, {
         type: 'ai',
@@ -68,10 +91,10 @@ function App() {
             <span>NutriBuddy</span>
           </div>
           <div className="nav-links">
-            <a className="nav-link">About</a>
-            <a className="nav-link">Features</a>
-            <a className="nav-link">Docs</a>
-            <button className="action-button">Get Started</button>
+            <div className="nav-user-info">
+              <span className="user-greeting">Hi, {currentUser.displayName?.split(' ')[0]}</span>
+              <button onClick={logout} className="logout-btn">Logout</button>
+            </div>
           </div>
         </nav>
 
@@ -88,6 +111,12 @@ function App() {
             onClick={() => setActiveTab('label')}
           >
             🏷️ Label Builder
+          </button>
+          <button
+            className={`tab ${activeTab === 'recipe' ? 'active' : ''}`}
+            onClick={() => setActiveTab('recipe')}
+          >
+            🧪 Recipe Lab
           </button>
         </div>
 
@@ -157,11 +186,21 @@ function App() {
               </button>
             </div>
           </>
-        ) : (
+        ) : activeTab === 'label' ? (
           <LabelBuilder />
+        ) : (
+          <RecipeLab />
         )}
       </div>
     </div>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   )
 }
 
