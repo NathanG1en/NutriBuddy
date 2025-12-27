@@ -720,6 +720,7 @@ input:focus {
   transform: translate(-2px, -2px);
   box-shadow: 6px 6px 0 #3d3d2e;
 }
+
 /* Login Page Styles */
 .login-page {
   display: flex;
@@ -738,7 +739,7 @@ input:focus {
   max-width: 480px;
   width: 100%;
   text-align: center;
-  box-shadow: 12px 12px 0 rgba(0,0,0,0.4);
+  box-shadow: 12px 12px 0 rgba(0, 0, 0, 0.4);
   position: relative;
   overflow: hidden;
 }
@@ -833,7 +834,8 @@ input:focus {
 }
 
 .logout-btn:hover {
-  background: #ff6b6b; /* Reddish hover for logout */
+  background: #ff6b6b;
+  /* Reddish hover for logout */
   transform: translate(-2px, -2px);
   box-shadow: 6px 6px 0 #3d3d2e;
 }
@@ -841,4 +843,23 @@ input:focus {
 .logout-btn:active {
   transform: translate(0, 0);
   box-shadow: 2px 2px 0 #3d3d2e;
+}
+
+/* Voice Toggle */
+.voice-toggle-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0 10px;
+  transition: transform 0.2s;
+}
+
+.voice-toggle-btn:hover {
+  transform: scale(1.1);
+}
+
+.voice-toggle-btn.muted {
+  opacity: 0.5;
+  filter: grayscale(1);
 }

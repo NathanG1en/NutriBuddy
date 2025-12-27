@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { Login } from './components/Login'
 import { useVoice } from './hooks/useVoice'
 import { RecipeLab } from './components/RecipeLab'
+import ReactMarkdown from 'react-markdown'
 
 interface Message {
   type: string
@@ -25,6 +26,7 @@ function AppContent() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [threadId] = useState(`user-${Math.random().toString(36).substr(2, 9)}`)
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true)
 
   if (authLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>
@@ -61,7 +63,7 @@ function AppContent() {
       }])
 
       // Speak the response
-      if (data.response) {
+      if (data.response && isVoiceEnabled) {
         speak(data.response)
       }
 
@@ -81,6 +83,14 @@ function AppContent() {
     '🥛 Find organic whole milk and show nutrition facts'
   ]
 
+  // Shared state for Label Builder
+  const [initialLabelData, setInitialLabelData] = useState<any>(null)
+
+  const handleAnalyzeRecipe = (data: any) => {
+    setInitialLabelData(data)
+    setActiveTab('label')
+  }
+
   return (
     <div className="app">
       <div className="main-container">
@@ -91,6 +101,13 @@ function AppContent() {
             <span>NutriBuddy</span>
           </div>
           <div className="nav-links">
+            <button
+              className={`voice-toggle-btn ${isVoiceEnabled ? 'active' : 'muted'}`}
+              onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
+              title={isVoiceEnabled ? "Mute Voice" : "Enable Voice"}
+            >
+              {isVoiceEnabled ? '🔊' : '🔇'}
+            </button>
             <div className="nav-user-info">
               <span className="user-greeting">Hi, {currentUser.displayName?.split(' ')[0]}</span>
               <button onClick={logout} className="logout-btn">Logout</button>
@@ -136,7 +153,9 @@ function AppContent() {
             <div className="chat-container">
               {messages.map((msg, idx) => (
                 <div key={idx} className={`message ${msg.type}-message`}>
-                  <div className="message-content">{msg.content}</div>
+                  <div className="message-content">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
                   {msg.imagePath && (
                     <div className="image-wrapper">
                       <img
@@ -187,9 +206,9 @@ function AppContent() {
             </div>
           </>
         ) : activeTab === 'label' ? (
-          <LabelBuilder />
+          <LabelBuilder initialData={initialLabelData} />
         ) : (
-          <RecipeLab />
+          <RecipeLab onAnalyze={handleAnalyzeRecipe} />
         )}
       </div>
     </div>

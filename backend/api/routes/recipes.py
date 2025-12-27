@@ -3,6 +3,8 @@ from firebase_admin import firestore
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
+import traceback
+import sys
 from backend.api.security import get_current_user, get_db
 
 router = APIRouter()
@@ -49,6 +51,8 @@ async def save_recipe(
 
         return {"status": "success", "id": doc_ref.id}
     except Exception as e:
+        traceback.print_exc()
+        print(f"Error saving recipe: {e}", file=sys.stderr)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -71,6 +75,8 @@ async def list_recipes(
 
         return results
     except Exception as e:
+        traceback.print_exc()
+        print(f"Error listing recipes: {e}", file=sys.stderr)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -90,4 +96,6 @@ async def delete_recipe(
         doc_ref.delete()
         return {"status": "deleted"}
     except Exception as e:
+        traceback.print_exc()
+        print(f"Error deleting recipe: {e}", file=sys.stderr)
         raise HTTPException(status_code=500, detail=str(e))

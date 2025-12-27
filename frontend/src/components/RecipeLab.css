@@ -100,36 +100,53 @@
 
 /* Saved List Styles */
 .saved-list {
-    max-height: 200px;
+    max-height: 400px;
     overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
+    padding: 6px;
+    /* Prevents hover clipping */
 }
 
 .saved-item {
     background: white;
     border: 2px solid #3d3d2e;
-    border-radius: 8px;
-    padding: 10px;
+    border-radius: 12px;
+    padding: 14px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .saved-item:hover {
-    background: #e8e5c8;
-    transform: translateX(2px);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 0 #3d3d2e;
+    background: #fff;
 }
 
 .saved-title {
-    display: block;
-    font-weight: bold;
-    font-size: 14px;
+    font-weight: 800;
+    font-size: 15px;
+    color: #3d3d2e;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 10px;
 }
 
 .saved-date {
-    font-size: 12px;
+    font-size: 11px;
     color: #666;
+    font-family: monospace;
+    background: #f0f0f0;
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
 }
 
 /* Output Styles */
@@ -258,4 +275,48 @@
 .instructions-list li {
     margin-bottom: 15px;
     line-height: 1.5;
+}
+/* Microphone Button */
+.input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.mic-btn {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: #f0f0f0;
+  color: #3d3d2e;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  z-index: 10;
+}
+
+.mic-btn:hover {
+  transform: scale(1.1);
+  background: #e8e5c8;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.mic-btn.listening {
+  background: #ff6b6b;
+  color: white;
+  animation: pulse 1.5s infinite;
+  box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.3);
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
 }

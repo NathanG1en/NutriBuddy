@@ -1,16 +1,35 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { IngredientTable } from './IngredientTable';
 import { NutritionPreview } from './NutritionPreview';
 import { ServingControls } from './ServingControls';
 import { useRecipeCalculation, type Ingredient } from '../hooks/useRecipeCalculation';
 
-export function LabelBuilder() {
+interface LabelBuilderProps {
+    initialData?: {
+        name: string;
+        ingredients: { name: string; grams: number }[];
+    } | null;
+}
+
+export function LabelBuilder({ initialData }: LabelBuilderProps) {
     const [ingredients, setIngredients] = useState<Ingredient[]>([]);
     const [recipeName, setRecipeName] = useState('My Custom Recipe');
     const [servingSize, setServingSize] = useState('1 cup');
     const [servingGrams, setServingGrams] = useState(100);
     const [servings, setServings] = useState(4);
     const [labelUrl, setLabelUrl] = useState<string | null>(null);
+
+    // Hydrate from initialData
+    useEffect(() => {
+        if (initialData) {
+            setRecipeName(initialData.name);
+            setIngredients(initialData.ingredients.map((ing, i) => ({
+                id: i.toString(), // Simple ID generation
+                name: ing.name,
+                grams: ing.grams
+            })));
+        }
+    }, [initialData]);
 
     // Live calculation
     const { nutrition, loading: calcLoading } = useRecipeCalculation(
