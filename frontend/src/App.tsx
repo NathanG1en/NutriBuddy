@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { Login } from './components/Login'
 import { useVoice } from './hooks/useVoice'
 import { RecipeLab } from './components/RecipeLab'
+import ReactMarkdown from 'react-markdown'
 
 interface Message {
   type: string
@@ -152,7 +153,9 @@ function AppContent() {
             <div className="chat-container">
               {messages.map((msg, idx) => (
                 <div key={idx} className={`message ${msg.type}-message`}>
-                  <div className="message-content">{msg.content}</div>
+                  <div className="message-content">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
                   {msg.imagePath && (
                     <div className="image-wrapper">
                       <img
