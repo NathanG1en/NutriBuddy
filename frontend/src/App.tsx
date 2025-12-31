@@ -64,7 +64,11 @@ function AppContent() {
 
       // Speak the response
       if (data.response && isVoiceEnabled) {
-        speak(data.response)
+        if (data.image_path) {
+          speak("Here is the generated nutrition label.")
+        } else {
+          speak(data.response)
+        }
       }
 
     } catch (error) {
