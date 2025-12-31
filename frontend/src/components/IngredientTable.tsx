@@ -10,7 +10,7 @@ interface Props {
 export function IngredientTable({ ingredients, setIngredients }: Props) {
     const [newName, setNewName] = useState('');
     const [newGrams, setNewGrams] = useState(100);
-    const { query, setQuery, results, loading } = useFoodSearch();
+    const { query, setQuery, results } = useFoodSearch();
 
     const handleAdd = () => {
         // Use the selected result description if available, otherwise raw input
