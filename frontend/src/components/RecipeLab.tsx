@@ -51,7 +51,7 @@ export const RecipeLab: React.FC<RecipeLabProps> = ({ onAnalyze }) => {
     const fetchSavedRecipes = async () => {
         try {
             const token = await currentUser?.getIdToken();
-            const res = await fetch('http://localhost:8000/api/recipes', {
+            const res = await fetch('/api/recipes', {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
@@ -72,7 +72,7 @@ export const RecipeLab: React.FC<RecipeLabProps> = ({ onAnalyze }) => {
         formData.append('file', file);
 
         try {
-            const response = await fetch('http://localhost:8000/api/rag/upload', {
+            const response = await fetch('/api/rag/upload', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${await currentUser.getIdToken()}`
@@ -100,7 +100,7 @@ export const RecipeLab: React.FC<RecipeLabProps> = ({ onAnalyze }) => {
         setRecipe(null);
 
         try {
-            const response = await fetch('http://localhost:8000/api/rag/generate', {
+            const response = await fetch('/api/rag/generate', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ export const RecipeLab: React.FC<RecipeLabProps> = ({ onAnalyze }) => {
         if (!recipe || !currentUser) return;
         setSaving(true);
         try {
-            await fetch('http://localhost:8000/api/recipes', {
+            await fetch('/api/recipes', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -155,7 +155,7 @@ export const RecipeLab: React.FC<RecipeLabProps> = ({ onAnalyze }) => {
         setAnalyzing(true);
         try {
             const ingredients = recipe.ingredients.map(i => `${i.quantity} ${i.unit} ${i.item}`);
-            const res = await fetch('http://localhost:8000/api/labels/analyze', {
+            const res = await fetch('/api/labels/analyze', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -196,7 +196,7 @@ export const RecipeLab: React.FC<RecipeLabProps> = ({ onAnalyze }) => {
         if (!confirm("Are you sure? This will delete all uploaded documents.")) return;
 
         try {
-            await fetch('http://localhost:8000/api/rag/clear', {
+            await fetch('/api/rag/clear', {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${await currentUser.getIdToken()}` }
             });

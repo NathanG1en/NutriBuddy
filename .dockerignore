@@ -1,0 +1,33 @@
+# Valid .dockerignore
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+venv
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.DS_Store
+
+# Frontend
+frontend/node_modules
+frontend/dist
+node_modules
+dist
+
+# Backend data
+backend/data
+backend/chroma_db
+backend/__pycache__

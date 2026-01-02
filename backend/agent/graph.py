@@ -13,7 +13,7 @@ from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage
 
 from backend.agent.tools import get_all_tools
@@ -24,8 +24,10 @@ from backend.config import settings
 # State Definition
 # ============================================
 
+
 class AgentState(TypedDict):
     """State that flows through the graph."""
+
     messages: Annotated[list, add_messages]
 
 
@@ -58,19 +60,20 @@ Note: All nutrition is based on grams. Ask users for approximate grams if needed
 Be friendly, concise, and helpful!"""
 
 
-
 # ============================================
 # Graph Nodes
 # ============================================
+
 
 def create_agent():
     """Create and return the compiled agent graph."""
 
     # Get tools and bind to LLM
     tools = get_all_tools()
-    llm = ChatOpenAI(
-        model="gpt-4o-mini",
-        api_key=settings.openai_api_key
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.0-flash-exp",
+        google_api_key=settings.gemini_api_key,
+        temperature=0,
     ).bind_tools(tools)
 
     # --- Node: Agent ---
@@ -126,6 +129,7 @@ def create_agent():
 # Convenience wrapper
 # ============================================
 
+
 class NutritionAgent:
     """Wrapper class for easier API integration."""
 
@@ -145,17 +149,20 @@ class NutritionAgent:
         config = {"configurable": {"thread_id": thread_id}}
 
         result = self.graph.invoke(
-            {"messages": [HumanMessage(content=message)]},
-            config
+            {"messages": [HumanMessage(content=message)]}, config
         )
 
         # Extract the final AI response
         last_message = result["messages"][-1]
-        response_text = last_message.content if hasattr(last_message, "content") else str(last_message)
+        response_text = (
+            last_message.content
+            if hasattr(last_message, "content")
+            else str(last_message)
+        )
 
         return {
             "message": response_text,
-            "image_path": None  # TODO: Extract from tool results if label was generated
+            "image_path": None,  # TODO: Extract from tool results if label was generated
         }
 
     def get_history(self, thread_id: str) -> list:

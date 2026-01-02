@@ -8,7 +8,7 @@ from backend.agent.graph import NutritionAgent
 router = APIRouter()
 
 
-@router.get("/")
+@router.get("/health")
 async def root():
     return {"status": "healthy", "service": "Nutrition Agent API", "version": "1.0.0"}
 
@@ -19,7 +19,7 @@ async def health_check(agent: NutritionAgent = Depends(get_agent)):
         status="healthy",
         agent="ready",
         tools_count=len(agent.tools),
-        api_version="1.0.0"
+        api_version="1.0.0",
     )
 
 
@@ -28,7 +28,6 @@ async def get_tools(agent: NutritionAgent = Depends(get_agent)):
     return {
         "count": len(agent.tools),
         "tools": [
-            ToolInfo(name=t.name, description=t.description or "")
-            for t in agent.tools
-        ]
+            ToolInfo(name=t.name, description=t.description or "") for t in agent.tools
+        ],
     }

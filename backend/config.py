@@ -1,10 +1,17 @@
 # backend/config.py
 from pydantic_settings import BaseSettings
 from typing import Optional
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+from pydantic import Field
 
 
 class Settings(BaseSettings):
     openai_api_key: str = ""
+    gemini_api_key: str = Field("", alias="GEMINI_API_KEY")
     USDA_KEY: str = "DEMO_KEY"
 
     # Optional: LangSmith tracing

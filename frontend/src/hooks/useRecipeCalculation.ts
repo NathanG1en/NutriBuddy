@@ -29,7 +29,7 @@ export function useRecipeCalculation(
 
             setLoading(true);
             try {
-                const res = await fetch('http://localhost:8000/api/recipe/calculate', {
+                const res = await fetch('/api/recipe/calculate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
