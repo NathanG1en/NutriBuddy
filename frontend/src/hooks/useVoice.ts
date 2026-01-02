@@ -15,7 +15,7 @@ export const useVoice = () => {
             setIsPlaying(true);
             const token = await currentUser.getIdToken();
 
-            const response = await fetch('http://localhost:8000/api/speak', {
+            const response = await fetch('/api/speak', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

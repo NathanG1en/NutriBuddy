@@ -42,7 +42,7 @@ export function LabelBuilder({ initialData }: LabelBuilderProps) {
         if (!nutrition) return;
 
         try {
-            const res = await fetch('http://localhost:8000/api/recipe/label', {
+            const res = await fetch('/api/recipe/label', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

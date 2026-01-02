@@ -59,6 +59,8 @@ def main():
         f"--source . "
         f"--project {project_id} "
         f"--region us-central1 "
+        f"--timeout 300 "
+        f"--memory 2Gi "
         f"--allow-unauthenticated "
         f"{env_flag}"
     )

@@ -19,7 +19,8 @@ export function useFoodSearch() {
 
             setLoading(true);
             try {
-                const res = await fetch(`http://localhost:8000/api/recipe/search?query=${encodeURIComponent(query)}`);
+                // Use relative path for production compatibility
+                const res = await fetch(`/api/recipe/search?query=${encodeURIComponent(query)}`);
                 if (res.ok) {
                     const data = await res.json();
                     if (!data.error) {
