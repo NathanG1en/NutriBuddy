@@ -9,7 +9,6 @@ RUN npm ci
 
 COPY frontend/ ./
 # Copy .env to parent dir (/app/.env) because vite config expects envDir: '..'
-COPY .env /app/.env
 RUN npm run build
 
 # Stage 2: Build Backend & Serve
