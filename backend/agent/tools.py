@@ -87,8 +87,8 @@ def parse_recipe_text(recipe_text: str) -> str:
         return json.dumps({"error": str(e)})
 
 
-@tool
-def calculate_recipe_nutrition(ingredients_input: str) -> str:
+@tool(response_format="content_and_artifact")
+def calculate_recipe_nutrition(ingredients_input: str) -> tuple[str, dict]:
     """
     Calculate combined nutrition for a recipe with multiple ingredients.
     Accepts natural language measurements (e.g. cups, tbsp, oz, slices, grams) or JSON.
@@ -100,7 +100,7 @@ def calculate_recipe_nutrition(ingredients_input: str) -> str:
             3. JSON array of objects: [{"name": "oats", "quantity": 2, "unit": "cup"}]
 
     Returns:
-        JSON with total nutrition, per-ingredient breakdown, and resolved gram weights.
+        Formatted summary for the LLM and structured artifact for the state.
     """
     try:
         service = _get_nutrition_service()
@@ -131,9 +131,51 @@ def calculate_recipe_nutrition(ingredients_input: str) -> str:
             "totals": result["recipe_totals"],
         }
 
-        return json.dumps(result, indent=2)
+        artifact = {
+            "type": "recipe_nutrition",
+            "totals": result["recipe_totals"],
+            "ingredients": result["ingredients"],
+        }
+
+        return json.dumps(result, indent=2), artifact
     except Exception as e:
-        return json.dumps({"error": str(e)})
+        return json.dumps({"error": str(e)}), {"error": str(e)}
+
+
+# ============================================
+# RAG Knowledge Base Tools
+# ============================================
+
+@tool
+def search_recipe_knowledge(query: str) -> str:
+    """
+    Search uploaded cookbooks, nutrition guides, and culinary documents in the vector store.
+    Use when answering questions about recipes from uploaded documents, specific diets, or culinary techniques.
+
+    Args:
+        query: Search query (e.g. "vegan pancake recipe", "keto substitution", "baking temperatures")
+
+    Returns:
+        JSON list of relevant text passages and source references.
+    """
+    try:
+        from backend.dependencies import get_rag_service
+        rag_service = get_rag_service()
+        docs = rag_service.query(query, k=3)
+        if not docs:
+            return json.dumps({"message": "No matching knowledge base documents found."})
+
+        results = []
+        for i, d in enumerate(docs):
+            results.append({
+                "chunk": i + 1,
+                "content": d.page_content[:500],
+                "source": d.metadata.get("source", "Uploaded Document"),
+                "page": d.metadata.get("page"),
+            })
+        return json.dumps({"results": results}, indent=2)
+    except Exception as e:
+        return json.dumps({"error": f"RAG search error: {e}"})
 
 
 # ============================================
@@ -144,11 +186,11 @@ def calculate_recipe_nutrition(ingredients_input: str) -> str:
 def format_nutrition_label(nutrition_json: str, food_name: str) -> str:
     """
     Create a text-based nutrition label.
-    
+
     Args:
         nutrition_json: JSON string with nutrition data from get_nutrition
         food_name: Name of the food for the label header
-    
+
     Returns:
         Formatted text nutrition label
     """
@@ -161,42 +203,50 @@ def format_nutrition_label(nutrition_json: str, food_name: str) -> str:
         return f"Error creating label: {e}"
 
 
-@tool
-def generate_label_image(nutrition_json: str, food_name: str) -> str:
+@tool(response_format="content_and_artifact")
+def generate_label_image(nutrition_json: str, food_name: str) -> tuple[str, dict]:
     """
     Generate a visual FDA-style nutrition label image.
-    
+
     Args:
         nutrition_json: JSON string with nutrition data from get_nutrition
         food_name: Name of the food for the label
-    
+
     Returns:
-        Confirmation message with filename. Image is saved and can be accessed via API.
+        Confirmation message for the agent and structured image artifact for the client.
     """
     try:
         data = json.loads(nutrition_json)
         if isinstance(data, list):
             data = data[0]
-        
+
         # Generate image bytes
         image_bytes = _get_label_service().generate_image(data, food_name)
-        
+
         # Save locally (API will serve it)
         from pathlib import Path
         labels_dir = Path(__file__).parent.parent / "data" / "labels"
         labels_dir.mkdir(parents=True, exist_ok=True)
-        
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         safe_name = "".join(c if c.isalnum() else "_" for c in food_name)[:30]
         filename = f"{safe_name}_{timestamp}.png"
-        
+
         filepath = labels_dir / filename
         filepath.write_bytes(image_bytes)
-        
-        return f"✅ Nutrition label saved as '{filename}'. Access at /labels/{filename}"
-        
+
+        message = f"✅ Nutrition label saved as '{filename}'. Access at /labels/{filename}"
+        artifact = {
+            "type": "label_image",
+            "filename": filename,
+            "image_path": f"/labels/{filename}",
+            "food_name": food_name,
+        }
+
+        return message, artifact
+
     except Exception as e:
-        return f"Error generating image: {e}"
+        return f"Error generating image: {e}", {"error": str(e)}
 
 
 # ============================================
@@ -210,6 +260,7 @@ def get_all_tools() -> list:
         get_nutrition,
         parse_recipe_text,
         calculate_recipe_nutrition,
+        search_recipe_knowledge,
         format_nutrition_label,
         generate_label_image,
     ]

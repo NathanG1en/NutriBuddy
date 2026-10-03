@@ -47,21 +47,23 @@ Overhaul the USDA FoodData Central ingestion pipeline and food-matching mechanis
 ---
 
 ## 🧠 Track 3: Modern LangGraph Agent: Typed State, Tool Artifacts & RAG Grounding
-* **Status**: ⏳ **Next Focus**
+* **Status**: ✅ **Completed** (Implemented in `feature/agent-state-artifacts-rag`, see [ADR 003](../adr/003-agent-typed-state-artifacts-rag.md))
 * **Engineering Disciplines**: Advanced Agentic AI, StateGraph Architecture, Retrieval-Augmented Generation (RAG).
 
 ### Objective
 Transition the nutrition conversational agent from loose string-matching and prompt-hacking into a deterministic, artifact-driven LangGraph workflow grounded in uploaded cookbook/dietary data.
 
-### Key Architecture Components
+### Delivered Architecture Components
 1. **Typed Graph State & Tool Artifacts**:
-   - Upgrade `AgentState` to store structured objects: `conversation_messages`, `active_recipe_data`, `generated_label_artifacts`, and `nutrition_summaries`.
-   - Eliminate fragile regex matching (`re.search(r"/labels/...png")`) by passing generated label artifacts directly through the graph state to API callers.
+   - Upgraded tools (`calculate_recipe_nutrition`, `generate_label_image`) using `response_format="content_and_artifact"` to attach structured data directly to `ToolMessage.artifact`.
+   - Built `NutritionAgent._extract_result` to deterministically extract `image_path`, `exportable`, and structured `artifacts`, eliminating fragile regex matching.
 2. **RAG Tool Integration**:
-   - Expose the existing `RAGService` (ChromaDB + Gemini embeddings) to the LangGraph agent as tools (`search_recipe_knowledge`, `consult_dietary_guidelines`).
-   - Provide source document citations and grounding in agent responses.
+   - Implemented `search_recipe_knowledge` tool querying `RAGService` (ChromaDB + Gemini embeddings) with source document and page attribution.
+   - Grounded LLM responses in uploaded cookbooks and dietary guidelines.
 3. **Streaming Agent Events (Server-Sent Events)**:
-   - Provide real-time token streaming and step-by-step tool execution updates (e.g., *"Searching USDA database..."*, *"Calculating macronutrients..."*) to the client via SSE.
+   - Implemented `NutritionAgent.astream_events(version="v2")` yielding real-time SSE event streams (`token`, `tool_start`, `tool_end`, `done`).
+   - Added `POST /api/chat/stream` endpoint for real-time frontend token streaming and tool execution updates.
+   - Converted standard `/api/chat` endpoint to non-blocking async `agent.arun()`.
 
 ---
 

@@ -133,34 +133,21 @@ def create_agent():
 
 
 class NutritionAgent:
-    """Wrapper class for easier API integration."""
+    """Wrapper class for easier API integration, streaming, and typed artifact resolution."""
 
     def __init__(self):
         self.graph = create_agent()
         self.tools = get_all_tools()
 
-    def run(self, message: str, thread_id: str = "default") -> dict:
-        """
-        Run the agent with a user message.
+    def _extract_result(self, result: dict) -> dict:
+        """Extract AI response text, typed tool artifacts, and generated image paths."""
+        messages = result.get("messages", [])
+        if not messages:
+            return {"message": "", "image_path": None, "artifacts": []}
 
-        Returns:
-            dict with 'message' and optionally 'image_path'
-        """
-        from langchain_core.messages import HumanMessage
-
-        config = {"configurable": {"thread_id": thread_id}}
-
-        result = self.graph.invoke(
-            {"messages": [HumanMessage(content=message)]}, config
-        )
-
-        # Extract the final AI response
-        last_message = result["messages"][-1]
-        raw_content = (
-            last_message.content
-            if hasattr(last_message, "content")
-            else str(last_message)
-        )
+        # 1. Extract text from last AI message
+        last_message = messages[-1]
+        raw_content = getattr(last_message, "content", str(last_message))
         if isinstance(raw_content, list):
             text_parts = []
             for part in raw_content:
@@ -174,9 +161,122 @@ class NutritionAgent:
         else:
             response_text = str(raw_content)
 
+        # 2. Extract typed tool artifacts from ToolMessages
+        artifacts = []
+        image_path = None
+        exportable = None
+
+        for msg in messages:
+            artifact = getattr(msg, "artifact", None)
+            if artifact and isinstance(artifact, dict):
+                artifacts.append(artifact)
+                if artifact.get("type") == "label_image":
+                    image_path = artifact.get("image_path")
+                elif artifact.get("type") == "recipe_nutrition":
+                    exportable = artifact
+
+        # Safety fallback: regex search on text if image_path wasn't caught by artifact
+        if not image_path:
+            import re
+            match = re.search(r"/labels/([A-Za-z0-9_]+\.png)", response_text)
+            if match:
+                image_path = f"/labels/{match.group(1)}"
+
         return {
             "message": response_text,
-            "image_path": None,  # TODO: Extract from tool results if label was generated
+            "image_path": image_path,
+            "artifacts": artifacts,
+            "exportable": exportable,
+        }
+
+    def run(self, message: str, thread_id: str = "default") -> dict:
+        """
+        Run the agent synchronously with a user message.
+        """
+        from langchain_core.messages import HumanMessage
+
+        config = {"configurable": {"thread_id": thread_id}}
+        result = self.graph.invoke(
+            {"messages": [HumanMessage(content=message)]}, config
+        )
+        return self._extract_result(result)
+
+    async def arun(self, message: str, thread_id: str = "default") -> dict:
+        """
+        Run the agent asynchronously with non-blocking event loop execution.
+        """
+        from langchain_core.messages import HumanMessage
+
+        config = {"configurable": {"thread_id": thread_id}}
+        result = await self.graph.ainvoke(
+            {"messages": [HumanMessage(content=message)]}, config
+        )
+        return self._extract_result(result)
+
+    async def astream_events(self, message: str, thread_id: str = "default"):
+        """
+        Stream agent events (tokens, tool execution steps, and artifacts) for Server-Sent Events.
+        """
+        from langchain_core.messages import HumanMessage
+
+        config = {"configurable": {"thread_id": thread_id}}
+        input_data = {"messages": [HumanMessage(content=message)]}
+
+        accumulated_text = []
+        artifacts = []
+        image_path = None
+
+        async for event in self.graph.astream_events(input_data, config, version="v2"):
+            kind = event.get("event")
+
+            # Token stream from Chat Model
+            if kind == "on_chat_model_stream":
+                chunk = event.get("data", {}).get("chunk")
+                if chunk and hasattr(chunk, "content") and chunk.content:
+                    text = chunk.content if isinstance(chunk.content, str) else ""
+                    if text:
+                        accumulated_text.append(text)
+                        yield {"event": "token", "data": {"token": text}}
+
+            # Tool execution start
+            elif kind == "on_tool_start":
+                name = event.get("name")
+                inputs = event.get("data", {}).get("input")
+                yield {
+                    "event": "tool_start",
+                    "data": {"tool": name, "input": str(inputs)[:300]},
+                }
+
+            # Tool execution end (with artifact)
+            elif kind == "on_tool_end":
+                name = event.get("name")
+                output = event.get("data", {}).get("output")
+                artifact = getattr(output, "artifact", None)
+                if artifact and isinstance(artifact, dict):
+                    artifacts.append(artifact)
+                    if artifact.get("type") == "label_image":
+                        image_path = artifact.get("image_path")
+
+                yield {
+                    "event": "tool_end",
+                    "data": {"tool": name, "artifact": artifact},
+                }
+
+        final_text = "".join(accumulated_text)
+        if not image_path:
+            import re
+            match = re.search(r"/labels/([A-Za-z0-9_]+\.png)", final_text)
+            if match:
+                image_path = f"/labels/{match.group(1)}"
+
+        yield {
+            "event": "done",
+            "data": {
+                "message": final_text,
+                "image_path": image_path,
+                "artifacts": artifacts,
+                "thread_id": thread_id,
+            },
         }
 
     def get_history(self, thread_id: str) -> list:

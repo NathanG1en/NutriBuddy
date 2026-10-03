@@ -91,10 +91,18 @@ This document provides a comprehensive overview of NutriBuddy's full-stack archi
 ## 🤖 Conversational Agent (`LangGraph`)
 
 * **State**: `AgentState` managing message history with `MemorySaver` checkpointer.
-* **Model**: Google Gemini (`gemini-2.0-flash-exp`).
+* **Model**: Google Gemini via `ChatGoogleGenAI`.
+* **Execution Modes**:
+  * **Asynchronous Execution (`arun`)**: Non-blocking `graph.ainvoke()` for standard REST `/api/chat`.
+  * **Server-Sent Events Streaming (`astream_events`)**: Real-time token streaming (`event: token`) and tool execution notifications (`event: tool_start`, `event: tool_end`, `event: done`) via `POST /api/chat/stream`.
+* **Tool Artifact Architecture**:
+  * Tools use `response_format="content_and_artifact"` to attach structured data (`label_image`, `recipe_nutrition`) directly to `ToolMessage.artifact`.
+  * Deterministic artifact extraction replaces brittle text regexes.
+* **RAG Knowledge Base Integration**:
+  * Tool `search_recipe_knowledge` queries `RAGService` (ChromaDB + Gemini embeddings) with source document and page attribution.
 * **Graph Flow**:
   ```
-  User Input ──► Agent (LLM) ──► Tool Calling? ──► Tools (USDA / Labels) ──► Agent ──► Response
+  User Input ──► Agent (LLM) ──► Tool Calling? ──► Tools (USDA / RAG / Labels) ──► Agent ──► Response + Artifacts
                                      │ (No tools)
                                      ▼
                                   Response

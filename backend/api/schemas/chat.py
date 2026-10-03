@@ -13,3 +13,4 @@ class ChatResponse(BaseModel):
     thread_id: str
     image_path: Optional[str] = None
     exportable: Optional[dict] = None  # For recipe builder export
+    artifacts: Optional[list[dict]] = None
