@@ -81,7 +81,7 @@ async def generate_recipe(
 
         # 2. Setup LLM Chain
         llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash-exp",
+            model=settings.gemini_model,
             google_api_key=settings.gemini_api_key,
             temperature=0.7,
         )

@@ -15,15 +15,15 @@ def extract_image_path(text: str) -> str | None:
     """Extract image filename from agent response."""
     match = re.search(r"/labels/([A-Za-z0-9_]+\.png)", text)
     if match:
-        return f"http://localhost:8000/labels/{match.group(1)}"
+        return f"/labels/{match.group(1)}"
     return None
 
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
-        request: ChatRequest,
-        agent: NutritionAgent = Depends(get_agent),
-        current_user: dict = Depends(get_current_user)
+    request: ChatRequest,
+    agent: NutritionAgent = Depends(get_agent),
+    current_user: dict = Depends(get_current_user),
 ):
     """Send a message to the nutrition agent."""
     try:
@@ -34,22 +34,18 @@ async def chat(
         image_path = extract_image_path(response_text)
 
         return ChatResponse(
-            response=response_text,
-            thread_id=thread_id,
-            image_path=image_path
+            response=response_text, thread_id=thread_id, image_path=image_path
         )
 
     except Exception as e:
         import traceback
+
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/history/{thread_id}")
-async def get_history(
-        thread_id: str,
-        agent: NutritionAgent = Depends(get_agent)
-):
+async def get_history(thread_id: str, agent: NutritionAgent = Depends(get_agent)):
     """Get conversation history for a thread."""
     messages = agent.get_history(thread_id)
 
@@ -59,8 +55,8 @@ async def get_history(
         "messages": [
             {
                 "role": msg.__class__.__name__.lower().replace("message", ""),
-                "content": getattr(msg, "content", str(msg))[:500]
+                "content": getattr(msg, "content", str(msg))[:500],
             }
             for msg in messages
-        ]
+        ],
     }

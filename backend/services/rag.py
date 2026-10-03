@@ -15,7 +15,8 @@ class RAGService:
     def __init__(self):
         self.persist_directory = "backend/data/chroma_db"
         self.embedding_function = GoogleGenerativeAIEmbeddings(
-            model="models/text-embedding-004", google_api_key=settings.gemini_api_key
+            model=settings.gemini_embedding_model,
+            google_api_key=settings.gemini_api_key,
         )
         # Initialize vector store
         self.vector_store = Chroma(

@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { FEATURES } from '../config/features';
 
 export const useVoice = () => {
     const { currentUser } = useAuth();
     const [isPlaying, setIsPlaying] = useState(false);
 
     const speak = useCallback(async (text: string) => {
-        if (!currentUser) return;
+        if (!FEATURES.ENABLE_VOICE || !currentUser) return;
 
         // Cleanup text: remove markdown like ** or *
         const cleanText = text.replace(/[*_#`]/g, '');

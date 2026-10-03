@@ -36,5 +36,6 @@ backend/data
 backend/chroma_db
 backend/__pycache__
 
-# Explicitly DO NOT ignore .env (syntax: !pattern)
-!.env
+# Explicitly DO NOT ignore .env.public (safe subset), but DO ignore .env
+.env
+!.env.public

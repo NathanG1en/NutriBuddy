@@ -45,14 +45,52 @@ def main():
         env_flag = f'--set-env-vars "{env_string}"'
 
     # 3. Construct Command
-    project_id = os.getenv("VITE_FIREBASE_PROJECT_ID", "YOUR_PROJECT_ID")
-    if project_id == "YOUR_PROJECT_ID":
-        # Try to find it in the env_vars list if not in os.environ yet
+    project_id = os.getenv("VITE_FIREBASE_PROJECT_ID")
+
+    # Try to find it in .env if not in os.environ
+    if not project_id:
         for v in env_vars:
             if v.startswith("VITE_FIREBASE_PROJECT_ID="):
                 project_id = v.split("=")[1]
+                break
+
+    # fallback: try gcloud config
+    if not project_id or project_id == "YOUR_PROJECT_ID":
+        try:
+            print("   Attempting to detect project ID from gcloud config...")
+            res = subprocess.run(
+                ["gcloud", "config", "get-value", "project"],
+                capture_output=True,
+                text=True,
+            )
+            val = res.stdout.strip()
+            if val and val != "(unset)":
+                project_id = val
+        except Exception:
+            pass
+
+    # fallback: prompt user
+    if not project_id or project_id == "YOUR_PROJECT_ID":
+        project_id = input(
+            "\n🔴 Could not detect Project ID. Please enter your GCP Project ID: "
+        ).strip()
+
+    if not project_id:
+        print("❌ Error: No Project ID provided. Exiting.")
+        sys.exit(1)
 
     print(f"\n🚀 Preparing deployment for project: {project_id}")
+
+    # 4. Create .env.public for safe build
+    public_env_path = Path(".env.public")
+    vite_vars = [v for v in env_vars if v.startswith("VITE_")]
+
+    print(
+        f"   Generating .env.public with {len(vite_vars)} safe variables for build..."
+    )
+    with open(public_env_path, "w") as f:
+        for v in vite_vars:
+            f.write(v + "\n")
 
     cmd = (
         f"gcloud run deploy nutribuddy "
@@ -72,9 +110,21 @@ def main():
 
     confirm = input("\nDo you want to run this command now? (y/n): ")
     if confirm.lower() == "y":
-        subprocess.run(cmd, shell=True)
+        try:
+            subprocess.run(cmd, shell=True, check=True)
+            print("\n✅ Deployment command finished.")
+        except subprocess.CalledProcessError:
+            print("\n❌ Deployment failed.")
+        finally:
+            # Cleanup
+            if public_env_path.exists():
+                print("   Cleaning up .env.public...")
+                public_env_path.unlink()
     else:
         print("Aborted.")
+        # Cleanup just in case
+        if public_env_path.exists():
+            public_env_path.unlink()
 
 
 if __name__ == "__main__":

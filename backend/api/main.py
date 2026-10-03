@@ -50,9 +50,16 @@ app.include_router(labels.router, prefix="/api/labels", tags=["Labels"])
 # This must come AFTER API routes so they take precedence.
 
 static_dir = Path("static")
+if not static_dir.exists():
+    fallback_dir = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+    if fallback_dir.exists():
+        static_dir = fallback_dir
+
 if static_dir.exists():
     # Mount assets/js/css
-    app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
+    assets_dir = static_dir / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
     # Catch-all route for SPA (React Router)
     @app.get("/{full_path:path}")
@@ -65,7 +72,7 @@ if static_dir.exists():
         index_file = static_dir / "index.html"
         return FileResponse(index_file)
 else:
-    print("Warning: Static directory 'static' not found. Frontend will not be served.")
+    print("Warning: Neither 'static' nor 'frontend/dist' found. Frontend will not be served.")
 
 
 if __name__ == "__main__":

@@ -69,32 +69,68 @@ def get_nutrition(fdc_id: str) -> str:
 
 
 @tool
-def calculate_recipe_nutrition(ingredients_json: str) -> str:
+def parse_recipe_text(recipe_text: str) -> str:
     """
-    Calculate combined nutrition for a recipe with multiple ingredients.
-    
+    Parse unstructured recipe text into structured ingredients with quantities, units, and food names.
+
     Args:
-        ingredients_json: JSON array of ingredients, e.g.:
-            [{"name": "eggs", "quantity": 2}, {"name": "flour", "quantity": 1}]
-        recipe_name: Name of the recipe
-    
+        recipe_text: The recipe ingredients text (e.g. "2 cups rolled oats\n1 cup whole milk\n2 tbsp chia seeds")
+
     Returns:
-        JSON with total nutrition and per-ingredient breakdown
+        JSON list of parsed ingredients with food name, quantity, and culinary unit.
     """
     try:
-        ingredients = json.loads(ingredients_json)
-        result = _get_nutrition_service().calculate_recipe(ingredients)
-        
+        from backend.services.ingredient_parser import IngredientParser
+        parsed = IngredientParser.parse_recipe_text(recipe_text)
+        return json.dumps([p.model_dump() for p in parsed], indent=2)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
+
+
+@tool
+def calculate_recipe_nutrition(ingredients_input: str) -> str:
+    """
+    Calculate combined nutrition for a recipe with multiple ingredients.
+    Accepts natural language measurements (e.g. cups, tbsp, oz, slices, grams) or JSON.
+
+    Args:
+        ingredients_input: Either:
+            1. Multi-line string, e.g.: "2 cups rolled oats\n1 cup milk\n2 tbsp peanut butter"
+            2. JSON array of strings: ["2 cups rolled oats", "1 cup milk"]
+            3. JSON array of objects: [{"name": "oats", "quantity": 2, "unit": "cup"}]
+
+    Returns:
+        JSON with total nutrition, per-ingredient breakdown, and resolved gram weights.
+    """
+    try:
+        service = _get_nutrition_service()
+        # Check if input is valid JSON
+        try:
+            parsed_json = json.loads(ingredients_input)
+            if isinstance(parsed_json, list):
+                result = service.calculate_recipe(parsed_json)
+            else:
+                result = service.calculate_recipe([parsed_json])
+        except (json.JSONDecodeError, TypeError):
+            # Treat as multi-line natural language text
+            from backend.services.ingredient_parser import IngredientParser
+            parsed_items = IngredientParser.parse_recipe_text(ingredients_input)
+            items = [
+                {"name": p.food_name, "quantity": p.quantity, "unit": p.unit, "raw_text": p.raw_text}
+                for p in parsed_items
+            ]
+            result = service.calculate_recipe(items)
+
         # Add export-friendly format
         result["exportable"] = {
             "ingredients": [
-                {"name": ing["name"], "grams": ing["grams"]}
+                {"name": ing["name"], "grams": ing.get("grams", 0.0)}
                 for ing in result["ingredients"]
                 if "error" not in ing
             ],
-            "totals": result["recipe_totals"]
+            "totals": result["recipe_totals"],
         }
-        
+
         return json.dumps(result, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
@@ -172,6 +208,7 @@ def get_all_tools() -> list:
     return [
         search_foods,
         get_nutrition,
+        parse_recipe_text,
         calculate_recipe_nutrition,
         format_nutrition_label,
         generate_label_image,
