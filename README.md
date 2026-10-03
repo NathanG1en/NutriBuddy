@@ -25,3 +25,16 @@ main.py
 5. **Tool** → formats response for LLM
 6. **Agent** → LLM processes result, maybe calls another tool or responds
 7. **API** → returns response to frontend
+
+---
+
+## 📚 Engineering Documentation
+
+Comprehensive documentation for engineers and AI agents is organized in the [`docs/`](docs/README.md) directory:
+
+* **[Documentation Hub](docs/README.md)**: Main documentation index.
+* **[Architecture Overview](docs/architecture/system-overview.md)**: Full-stack system architecture, data pipelines, and service contracts.
+* **[Backend Roadmap](docs/roadmap/backend-roadmap.md)**: Active and planned AI & Data Engineering tracks.
+* **[Benchmark Reports](docs/benchmarks/track-2-async-caching.md)**: Empirical performance and latency benchmarks.
+* **[Architecture Decision Records (ADRs)](docs/adr/001-async-ingestion-sqlite-wal.md)**: Rationale, trade-offs, and consequences of key architectural choices.
+
