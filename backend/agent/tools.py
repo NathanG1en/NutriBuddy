@@ -250,6 +250,71 @@ def generate_label_image(nutrition_json: str, food_name: str) -> tuple[str, dict
 
 
 # ============================================
+# Multimodal Vision Tools
+# ============================================
+
+@tool(response_format="content_and_artifact")
+def analyze_food_image(image_path_or_url: str, notes: str = "") -> tuple[str, dict]:
+    """
+    Analyze an image of a meal or food item using multimodal vision AI.
+    Accepts a local file path (e.g. data/uploads/photo.jpg or /labels/sample.png).
+    Identifies food components, estimates portions, and resolves USDA nutrition totals.
+
+    Args:
+        image_path_or_url: Path to the meal photo on disk.
+        notes: Optional context or preparation notes (e.g. "dressing on the side").
+
+    Returns:
+        Formatted summary for the agent and structured vision artifact for the client.
+    """
+    import asyncio
+    import concurrent.futures
+    from pathlib import Path
+    from backend.dependencies import get_vision_service
+
+    try:
+        path = Path(image_path_or_url)
+        if not path.is_file():
+            candidate = Path(__file__).parent.parent / image_path_or_url.lstrip("/")
+            if candidate.is_file():
+                path = candidate
+            else:
+                return (
+                    json.dumps({"error": f"Image file not found at '{image_path_or_url}'"}),
+                    {"error": "File not found"},
+                )
+
+        image_bytes = path.read_bytes()
+        vision_svc = get_vision_service()
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop and loop.is_running():
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                result = pool.submit(
+                    asyncio.run,
+                    vision_svc.analyze_meal_async(image_bytes, user_notes=notes),
+                ).result()
+        else:
+            result = asyncio.run(vision_svc.analyze_meal_async(image_bytes, user_notes=notes))
+
+        artifact = {
+            "type": "meal_vision",
+            "meal_name": result.get("meal_name"),
+            "detected_items": result.get("detected_items", []),
+            "recipe_totals": result.get("recipe_totals", {}),
+            "ingredients": result.get("ingredients", []),
+        }
+
+        return json.dumps(result, indent=2), artifact
+    except Exception as e:
+        return json.dumps({"error": str(e)}), {"error": str(e)}
+
+
+# ============================================
 # Export all tools
 # ============================================
 
@@ -263,4 +328,6 @@ def get_all_tools() -> list:
         search_recipe_knowledge,
         format_nutrition_label,
         generate_label_image,
+        analyze_food_image,
     ]
+

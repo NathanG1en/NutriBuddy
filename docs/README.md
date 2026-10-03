@@ -34,13 +34,14 @@ docs/
   * [ADR 001: Async Ingestion & Embedded SQLite Storage](file:///Users/nathanglen/NutriBuddy/docs/adr/001-async-ingestion-sqlite-wal.md)
   * [ADR 002: Natural Language Ingredient Parsing & Portion Normalization](file:///Users/nathanglen/NutriBuddy/docs/adr/002-natural-language-ingredient-parser.md)
   * [ADR 003: LangGraph Agent Typed State, Tool Artifacts, RAG Grounding & SSE Streaming](file:///Users/nathanglen/NutriBuddy/docs/adr/003-agent-typed-state-artifacts-rag.md)
+  * [ADR 004: Multimodal Vision Ingestion Pipeline for Meals & Physical Labels](file:///Users/nathanglen/NutriBuddy/docs/adr/004-multimodal-vision-pipeline.md)
 
 ### 2. Roadmaps & Planning
 * **[Backend Engineering Roadmap](file:///Users/nathanglen/NutriBuddy/docs/roadmap/backend-roadmap.md)**: Detailed breakdown of the four engineering tracks:
   * **Track 1**: Natural Language Ingredient & Portion Normalization Engine *(Completed)*
   * **Track 2**: High-Performance Async Ingestion & Vector Caching Pipeline *(Completed)*
   * **Track 3**: Modern LangGraph Agent: Typed State, Tool Artifacts & RAG Grounding *(Completed)*
-  * **Track 4**: Multimodal Vision Ingestion Pipeline *(Next Focus)*
+  * **Track 4**: Multimodal Vision Ingestion Pipeline *(Completed)*
 
 ### 3. Empirical Benchmarks
 * **[Track 2 Benchmark Report](file:///Users/nathanglen/NutriBuddy/docs/benchmarks/track-2-async-caching.md)**:

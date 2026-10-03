@@ -86,6 +86,13 @@ This document provides a comprehensive overview of NutriBuddy's full-stack archi
   * Culinary density matrix (g/ml) for volumetric conversions (oils, flours, sugars, liquids).
   * Discrete count mappings (eggs, bananas, garlic cloves).
 
+### 8. `VisionService` ([backend/services/vision.py](file:///Users/nathanglen/NutriBuddy/backend/services/vision.py))
+* **Role**: Multimodal vision ingestion for plate meals and physical Nutrition Facts panels.
+* **Key Features**:
+  * Plate & Meal Analysis (`analyze_meal_async`): Ingests meal photos, extracts ingredients and portions using Gemini Vision, and cross-validates against USDA FoodData Central via `NutritionService`.
+  * Physical Label OCR & Reconstruction (`extract_and_reconstruct_label_async`): Extracts all 15 FDA nutrients from physical packaging and renders a digital FDA Nutrition Facts label image via `LabelService`.
+  * Exposes dedicated endpoints: `POST /api/vision/meal` and `POST /api/vision/label`.
+
 ---
 
 ## 🤖 Conversational Agent (`LangGraph`)

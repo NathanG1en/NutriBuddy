@@ -59,23 +59,28 @@ async def analyze_recipe(
 
         # Run agent
         result = agent.run(prompt, thread_id=f"user_{current_user['uid']}")
-        response_text = result["message"]
+        response_text = result.get("message", "")
 
-        # Extract Image URL
-        import re
-        import json
+        # Extract Image URL (prefer typed artifact from agent)
+        image_url = result.get("image_path")
+        if not image_url:
+            import re
+            image_match = re.search(r"(/labels/[\w_]+\.png)", response_text)
+            image_url = image_match.group(1) if image_match else None
 
-        image_match = re.search(r"(/labels/[\w_]+\.png)", response_text)
-        image_url = image_match.group(1) if image_match else None
+        # Extract JSON Ingredients (prefer exportable artifact)
+        exportable = result.get("exportable") or {}
+        structured_ingredients = exportable.get("ingredients", [])
 
-        # Extract JSON Ingredients
-        ingredients_match = re.search(r"```json(.*?)```", response_text, re.DOTALL)
-        structured_ingredients = []
-        if ingredients_match:
-            try:
-                structured_ingredients = json.loads(ingredients_match.group(1).strip())
-            except:
-                pass
+        if not structured_ingredients:
+            import re
+            import json
+            ingredients_match = re.search(r"```json(.*?)```", response_text, re.DOTALL)
+            if ingredients_match:
+                try:
+                    structured_ingredients = json.loads(ingredients_match.group(1).strip())
+                except Exception:
+                    pass
 
         return {
             "analysis": response_text,
