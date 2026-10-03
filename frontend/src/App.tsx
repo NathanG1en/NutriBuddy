@@ -6,6 +6,7 @@ import { Login } from './components/Login'
 import { useVoice } from './hooks/useVoice'
 import { RecipeLab } from './components/RecipeLab'
 import ReactMarkdown from 'react-markdown'
+import { FEATURES } from './config/features'
 
 interface Message {
   type: string
@@ -26,7 +27,7 @@ function AppContent() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [threadId] = useState(`user-${Math.random().toString(36).substr(2, 9)}`)
-  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true)
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(FEATURES.ENABLE_VOICE)
 
   if (authLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>
@@ -62,8 +63,8 @@ function AppContent() {
         imagePath: data.image_path
       }])
 
-      // Speak the response
-      if (data.response && isVoiceEnabled) {
+      // Speak the response if voice feature is enabled
+      if (FEATURES.ENABLE_VOICE && isVoiceEnabled && data.response) {
         if (data.image_path) {
           speak("Here is the generated nutrition label.")
         } else {
@@ -105,13 +106,15 @@ function AppContent() {
             <span>NutriBuddy</span>
           </div>
           <div className="nav-links">
-            <button
-              className={`voice-toggle-btn ${isVoiceEnabled ? 'active' : 'muted'}`}
-              onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
-              title={isVoiceEnabled ? "Mute Voice" : "Enable Voice"}
-            >
-              {isVoiceEnabled ? '🔊' : '🔇'}
-            </button>
+            {FEATURES.ENABLE_VOICE && (
+              <button
+                className={`voice-toggle-btn ${isVoiceEnabled ? 'active' : 'muted'}`}
+                onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
+                title={isVoiceEnabled ? "Mute Voice" : "Enable Voice"}
+              >
+                {isVoiceEnabled ? '🔊' : '🔇'}
+              </button>
+            )}
             <div className="nav-user-info">
               <span className="user-greeting">Hi, {currentUser.displayName?.split(' ')[0]}</span>
               <button onClick={logout} className="logout-btn">Logout</button>

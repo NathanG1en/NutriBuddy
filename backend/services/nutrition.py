@@ -131,19 +131,19 @@ class NutritionService:
                 quantity = parsed.quantity
                 unit = parsed.unit
                 raw_text = ing
-            elif isinstance(ing, dict) and ("raw_text" in ing or "text" in ing):
+            elif isinstance(ing, dict) and bool(ing.get("raw_text") or ing.get("text")):
                 raw_text = ing.get("raw_text") or ing.get("text", "")
                 parsed = IngredientParser.parse_line(raw_text)
                 food_query = parsed.food_name
                 quantity = parsed.quantity
                 unit = parsed.unit
             elif isinstance(ing, dict):
-                food_query = ing.get("name", "")
+                food_query = ing.get("name") or ing.get("food_name") or ""
                 quantity = float(ing.get("quantity") or 1.0)
                 unit = ing.get("unit")
-                raw_text = f"{quantity} {unit or ''} {food_query}".strip()
+                raw_text = ing.get("raw_text") or f"{quantity} {unit or ''} {food_query}".strip()
                 # Check for explicit grams specification
-                if "grams" in ing and ing["grams"] is not None and not unit:
+                if ing.get("grams") is not None and (not unit or str(unit).lower() in ("g", "gram", "grams")):
                     explicit_grams = float(ing["grams"])
             else:
                 return {"name": str(ing), "grams": 0.0, "error": "Invalid format"}
@@ -152,16 +152,18 @@ class NutritionService:
                 return {"name": raw_text, "grams": 0.0, "error": "Missing food name"}
 
             # 2. Search for food item in USDA database
-            result = await self.search_async(food_query)
-            if not result:
-                return {
-                    "name": food_query,
-                    "raw_text": raw_text,
-                    "grams": 0.0,
-                    "error": "Not found in database",
-                }
+            fdc_id = ing.get("fdc_id") or ing.get("fdcId") if isinstance(ing, dict) else None
+            if not fdc_id:
+                result = await self.search_async(food_query)
+                if not result:
+                    return {
+                        "name": food_query,
+                        "raw_text": raw_text,
+                        "grams": 0.0,
+                        "error": "Not found in database",
+                    }
+                fdc_id = result.get("fdcId")
 
-            fdc_id = result.get("fdcId")
             if not fdc_id:
                 return {
                     "name": food_query,

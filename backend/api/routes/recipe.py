@@ -27,7 +27,7 @@ async def calculate_recipe(
     nutrition_service: NutritionService = Depends(get_nutrition_service),
 ):
     """Calculate nutrition for a recipe (live preview) with natural unit conversion."""
-    ingredients = [i.model_dump() for i in request.ingredients]
+    ingredients = [i.model_dump(exclude_none=True) for i in request.ingredients]
     result = await nutrition_service.calculate_recipe_async(ingredients)
 
     # Calculate total grams from resolved ingredients

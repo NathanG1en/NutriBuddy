@@ -8,6 +8,10 @@ class Settings(BaseSettings):
 
     openai_api_key: str = ""
     gemini_api_key: str = Field("", alias="GEMINI_API_KEY")
+    gemini_model: str = Field("gemini-3.8-flash", alias="GEMINI_MODEL")
+    gemini_embedding_model: str = Field(
+        "models/gemini-embedding-001", alias="GEMINI_EMBEDDING_MODEL"
+    )
     USDA_KEY: str = "DEMO_KEY"
 
     # Optional: LangSmith tracing

@@ -79,3 +79,17 @@ async def test_calculate_recipe_with_natural_units(test_service):
     assert result["ingredients"][0]["grams"] == 150.0
     assert result["ingredients"][1]["grams"] == 300.0
     assert result["recipe_totals"]["calories"] == 900.0
+
+
+@pytest.mark.asyncio
+async def test_calculate_recipe_with_pydantic_dict(test_service):
+    # Pass dict containing name and grams with raw_text=None (typical of Pydantic model_dump)
+    ingredients = [
+        {"name": "oats", "grams": 100.0, "quantity": None, "unit": None, "raw_text": None, "fdc_id": None}
+    ]
+
+    result = await test_service.calculate_recipe_async(ingredients)
+    assert len(result["ingredients"]) == 1
+    assert "error" not in result["ingredients"][0]
+    assert result["ingredients"][0]["grams"] == 100.0
+    assert result["recipe_totals"]["calories"] == 200.0

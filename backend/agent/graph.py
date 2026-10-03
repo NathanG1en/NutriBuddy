@@ -73,7 +73,7 @@ def create_agent():
     # Get tools and bind to LLM
     tools = get_all_tools()
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash-exp",
+        model=settings.gemini_model,
         google_api_key=settings.gemini_api_key,
         temperature=0,
     ).bind_tools(tools)
@@ -156,11 +156,23 @@ class NutritionAgent:
 
         # Extract the final AI response
         last_message = result["messages"][-1]
-        response_text = (
+        raw_content = (
             last_message.content
             if hasattr(last_message, "content")
             else str(last_message)
         )
+        if isinstance(raw_content, list):
+            text_parts = []
+            for part in raw_content:
+                if isinstance(part, dict) and "text" in part:
+                    text_parts.append(part["text"])
+                elif isinstance(part, str):
+                    text_parts.append(part)
+                else:
+                    text_parts.append(str(part))
+            response_text = "\n".join(text_parts)
+        else:
+            response_text = str(raw_content)
 
         return {
             "message": response_text,
