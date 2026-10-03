@@ -23,7 +23,7 @@ async def calculate_recipe(
 ):
     """Calculate nutrition for a recipe (live preview)."""
     ingredients = [{"name": i.name, "grams": i.grams} for i in request.ingredients]
-    result = nutrition_service.calculate_recipe(ingredients)
+    result = await nutrition_service.calculate_recipe_async(ingredients)
 
     # Calculate per-serving
     total_grams = sum(i.grams for i in request.ingredients)
@@ -74,7 +74,7 @@ async def search_food(
     query: str, nutrition_service: NutritionService = Depends(get_nutrition_service)
 ):
     """Search for a food (autocomplete)."""
-    result = nutrition_service.search(query)
+    result = await nutrition_service.search_async(query)
     if result:
         return {"fdc_id": result.get("fdcId"), "description": result.get("description")}
     return {"error": "Not found"}
