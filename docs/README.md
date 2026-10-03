@@ -19,8 +19,9 @@ docs/
 ├── benchmarks/                         # Empirical measurements & profiling reports
 │   └── track-2-async-caching.md        # Benchmark report: Async I/O, SQLite WAL & Reranking
 │
-└── adr/                                # Architecture Decision Records (ADRs)
-    └── 001-async-ingestion-sqlite-wal.md  # ADR: Moving from serial JSON to async SQLite WAL
+├── adr/                                # Architecture Decision Records (ADRs)
+│   ├── 001-async-ingestion-sqlite-wal.md  # ADR: Moving from serial JSON to async SQLite WAL
+│   └── 002-natural-language-ingredient-parser.md # ADR: Natural Language Ingredient & Unit Engine
 ```
 
 ---
@@ -31,12 +32,13 @@ docs/
 * **[System Overview](file:///Users/nathanglen/NutriBuddy/docs/architecture/system-overview.md)**: Full component breakdown covering FastAPI, LangGraph ReAct agent, ChromaDB RAG, and Firebase Auth.
 * **[Architecture Decision Records (ADRs)](file:///Users/nathanglen/NutriBuddy/docs/adr)**: Context, trade-offs, and consequences of key technical pivots.
   * [ADR 001: Async Ingestion & Embedded SQLite Storage](file:///Users/nathanglen/NutriBuddy/docs/adr/001-async-ingestion-sqlite-wal.md)
+  * [ADR 002: Natural Language Ingredient Parsing & Portion Normalization](file:///Users/nathanglen/NutriBuddy/docs/adr/002-natural-language-ingredient-parser.md)
 
 ### 2. Roadmaps & Planning
 * **[Backend Engineering Roadmap](file:///Users/nathanglen/NutriBuddy/docs/roadmap/backend-roadmap.md)**: Detailed breakdown of the four engineering tracks:
-  * **Track 1**: Natural Language Ingredient & Portion Normalization Engine *(Next)*
+  * **Track 1**: Natural Language Ingredient & Portion Normalization Engine *(Completed)*
   * **Track 2**: High-Performance Async Ingestion & Vector Caching Pipeline *(Completed)*
-  * **Track 3**: Modern LangGraph Agent: Typed State, Tool Artifacts & RAG Grounding
+  * **Track 3**: Modern LangGraph Agent: Typed State, Tool Artifacts & RAG Grounding *(Next Focus)*
   * **Track 4**: Multimodal Vision Ingestion Pipeline
 
 ### 3. Empirical Benchmarks

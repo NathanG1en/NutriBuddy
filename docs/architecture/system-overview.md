@@ -72,6 +72,20 @@ This document provides a comprehensive overview of NutriBuddy's full-stack archi
   * Layout engine rendering pixel-accurate FDA Nutrition Facts images via Pillow (`PIL`).
   * Configurable daily value percentages, serving sizes, and container servings.
 
+### 6. `IngredientParser` ([backend/services/ingredient_parser.py](file:///Users/nathanglen/NutriBuddy/backend/services/ingredient_parser.py))
+* **Role**: Natural language ingredient extraction engine.
+* **Key Features**:
+  * Sub-millisecond deterministic regex parser for mixed fractions (`2 1/2`), unicode fractions (`½`), ranges, and culinary units.
+  * Preparation stripping (`diced`, `warm`, `chopped`, `minced`).
+  * Gemini 2.0 Flash structured output fallback for complex culinary prose.
+
+### 7. `UnitConverter` ([backend/services/unit_converter.py](file:///Users/nathanglen/NutriBuddy/backend/services/unit_converter.py))
+* **Role**: Culinary unit and portion conversion engine.
+* **Key Features**:
+  * Matches specific USDA `foodPortions` metadata (e.g. `1 cup oats = 81g`, `1 cup milk = 245g`).
+  * Culinary density matrix (g/ml) for volumetric conversions (oils, flours, sugars, liquids).
+  * Discrete count mappings (eggs, bananas, garlic cloves).
+
 ---
 
 ## 🤖 Conversational Agent (`LangGraph`)

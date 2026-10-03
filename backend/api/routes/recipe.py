@@ -8,10 +8,15 @@ from backend.api.schemas.recipe import (
     RecipeNutrition,
     LabelRequest,
     Ingredient,
+    ParseRecipeRequest,
+    ParseRecipeResponse,
+    ParsedIngredientResponse,
 )
 from backend.dependencies import get_nutrition_service, get_label_service
 from backend.services.nutrition import NutritionService
 from backend.services.labels import LabelService, LabelLayoutConfig
+from backend.services.ingredient_parser import IngredientParser
+from backend.services.unit_converter import UnitConverter
 
 router = APIRouter()
 
@@ -21,12 +26,12 @@ async def calculate_recipe(
     request: RecipeRequest,
     nutrition_service: NutritionService = Depends(get_nutrition_service),
 ):
-    """Calculate nutrition for a recipe (live preview)."""
-    ingredients = [{"name": i.name, "grams": i.grams} for i in request.ingredients]
+    """Calculate nutrition for a recipe (live preview) with natural unit conversion."""
+    ingredients = [i.model_dump() for i in request.ingredients]
     result = await nutrition_service.calculate_recipe_async(ingredients)
 
-    # Calculate per-serving
-    total_grams = sum(i.grams for i in request.ingredients)
+    # Calculate total grams from resolved ingredients
+    total_grams = sum(i.get("grams", 0.0) for i in result["ingredients"] if "error" not in i)
     scale = request.serving_size_grams / total_grams if total_grams > 0 else 1
 
     per_serving = {
@@ -41,6 +46,33 @@ async def calculate_recipe(
         per_serving=per_serving,
         ingredients=result["ingredients"],
     )
+
+
+@router.post("/parse", response_model=ParseRecipeResponse)
+async def parse_recipe(request: ParseRecipeRequest):
+    """Parse raw multi-line recipe text into structured ingredients with estimated gram weights."""
+    parsed_items = await IngredientParser.parse_with_llm_fallback(request.recipe_text)
+    response_items = []
+
+    for item in parsed_items:
+        conv = UnitConverter.resolve_to_grams(
+            quantity=item.quantity,
+            unit=item.unit,
+            food_name=item.food_name,
+        )
+        response_items.append(
+            ParsedIngredientResponse(
+                raw_text=item.raw_text,
+                food_name=item.food_name,
+                quantity=item.quantity,
+                unit=item.unit,
+                preparation=item.preparation,
+                confidence=item.confidence,
+                estimated_grams=conv.get("grams"),
+            )
+        )
+
+    return ParseRecipeResponse(ingredients=response_items)
 
 
 @router.post("/label")

@@ -64,3 +64,18 @@ async def test_calculate_recipe_async_concurrency(test_service):
         assert len(ing["portions"]) == 1
         assert ing["portions"][0]["description"] == "1 cup"
         assert ing["portions"][0]["gram_weight"] == 150.0
+
+
+@pytest.mark.asyncio
+async def test_calculate_recipe_with_natural_units(test_service):
+    # Pass natural language strings
+    ingredients = [
+        "1 cup oats",      # USDA portion: 1 cup = 150g -> 1.5x base -> 300 cal
+        "2 cups milk",     # USDA portion: 1 cup = 150g -> 300g -> 3.0x base -> 600 cal
+    ]
+
+    result = await test_service.calculate_recipe_async(ingredients)
+    assert len(result["ingredients"]) == 2
+    assert result["ingredients"][0]["grams"] == 150.0
+    assert result["ingredients"][1]["grams"] == 300.0
+    assert result["recipe_totals"]["calories"] == 900.0
