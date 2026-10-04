@@ -35,6 +35,7 @@ docs/
   * [ADR 002: Natural Language Ingredient Parsing & Portion Normalization](file:///Users/nathanglen/NutriBuddy/docs/adr/002-natural-language-ingredient-parser.md)
   * [ADR 003: LangGraph Agent Typed State, Tool Artifacts, RAG Grounding & SSE Streaming](file:///Users/nathanglen/NutriBuddy/docs/adr/003-agent-typed-state-artifacts-rag.md)
   * [ADR 004: Multimodal Vision Ingestion Pipeline for Meals & Physical Labels](file:///Users/nathanglen/NutriBuddy/docs/adr/004-multimodal-vision-pipeline.md)
+  * [ADR 005: Multi-Node LangGraph Agent Architecture (Planner, Tools & Auditor)](file:///Users/nathanglen/NutriBuddy/docs/adr/005-multi-node-agent-graph.md)
 
 ### 2. Roadmaps & Planning
 * **[Backend Engineering Roadmap](file:///Users/nathanglen/NutriBuddy/docs/roadmap/backend-roadmap.md)**: Detailed breakdown of the four engineering tracks:

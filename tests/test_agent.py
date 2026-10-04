@@ -174,3 +174,34 @@ async def test_chat_endpoints():
     assert "event: done" in text_body
 
     app.dependency_overrides.clear()
+
+
+def test_multi_node_extract_combined_messages():
+    agent = NutritionAgent.__new__(NutritionAgent)
+
+    planner_msg = AIMessage(
+        content="Here is your Mediterranean Chicken Bowl recipe with quinoa and roasted peppers."
+    )
+    auditor_msg = AIMessage(
+        content="### 🛡️ NutriAuditor Dietetic & Safety Audit\n- **Allergen Alert**: None detected.\n- **Sodium**: 420mg (Well within daily limits).",
+        name="NutriAuditor",
+    )
+
+    raw_result = {"messages": [planner_msg, auditor_msg]}
+    extracted = agent._extract_result(raw_result)
+
+    assert "Mediterranean Chicken Bowl" in extracted["message"]
+    assert "### 🛡️ NutriAuditor Dietetic & Safety Audit" in extracted["message"]
+    assert extracted["image_path"] is None
+
+
+def test_multi_node_graph_structure():
+    from backend.agent.graph import create_agent
+
+    compiled_graph = create_agent()
+    node_names = set(compiled_graph.nodes.keys())
+
+    assert "planner" in node_names
+    assert "tools" in node_names
+    assert "auditor" in node_names
+

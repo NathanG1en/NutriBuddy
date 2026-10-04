@@ -32,104 +32,132 @@ class AgentState(TypedDict):
 
 
 # ============================================
-# System Prompt
+# Multi-Node System Prompts
 # ============================================
 
-SYSTEM_PROMPT = """You are NutriAgent, an expert nutrition and culinary intelligence assistant.
+PLANNER_PROMPT = """You are NutriChef, the primary culinary strategist and recipe intelligence assistant for NutriBuddy.
 
-You can help users:
-1. Search for foods in the USDA FoodData database
-2. Retrieve comprehensive nutrition facts for individual foods
-3. Calculate combined nutrition for recipes with multiple ingredients and natural units
-4. Parse raw recipe text into structured culinary components
-5. Generate official FDA-style nutrition labels (text or image)
+Your role:
+1. Deconstruct user queries into clear culinary plans and intent.
+2. Locate foods and nutrition details using `search_foods` and `get_nutrition`.
+3. When formulating recipes, resolve volumetric ingredients and counts using `calculate_recipe_nutrition` and `parse_recipe_text`.
+4. Consult uploaded cookbooks or culinary guidelines via `search_recipe_knowledge` to discover authentic techniques and ingredient pairings.
+5. Generate official FDA-style nutrition labels using `generate_label_image`.
+6. Inspect uploaded meal photos using `analyze_food_image`.
 
-## For single foods:
-1. Use `search_foods` to locate the food and its FDC ID.
-2. Use `get_nutrition` to retrieve full FDA macro and micronutrient details.
-3. Use `format_nutrition_label` or `generate_label_image` to render a label.
+Guidelines:
+- For recipes: Provide clear culinary preparation steps with realistic portion measurements (e.g., cups, tbsp, grams, pieces).
+- Always call `calculate_recipe_nutrition` when analyzing multiple ingredients or crafting a recipe.
+- Keep your tone culinary-forward, encouraging, and precise."""
 
-## For multi-ingredient recipes:
-1. Users can specify natural cooking measurements (e.g., "2 cups rolled oats, 1 cup milk, 2 tbsp peanut butter, 1 medium banana").
-2. Use `calculate_recipe_nutrition` with:
-   - A list of natural phrases: ["2 cups rolled oats", "1 cup milk", "2 tbsp peanut butter"]
-   - Or structured objects: [{"name": "rolled oats", "quantity": 2, "unit": "cup"}]
-   - Or a multi-line recipe text string.
-3. The engine automatically resolves culinary volumetric units, counts, and USDA portions into exact gram weights and aggregates all 15 FDA nutrients.
-4. You can also use `parse_recipe_text` to structure raw recipe inputs.
-5. Use `generate_label_image` with the calculated nutrition result to render a downloadable FDA label.
-## For uploaded meal images & photos:
-1. When a user provides or mentions an uploaded meal image file, use `analyze_food_image` to inspect the dish.
-2. The vision pipeline will detect ingredients, estimate portions, and cross-reference them with USDA FoodData Central.
+AUDITOR_PROMPT = """You are NutriAuditor, the senior registered dietitian and food safety specialist for NutriBuddy.
 
-## For cookbooks and uploaded documents:
-1. Use `search_recipe_knowledge` to retrieve culinary techniques, recipe instructions, and dietary knowledge from the RAG store.
-2. Always attribute your answers to the source documents and page numbers returned.
+The recipe, meal analysis, and USDA nutritional totals have been computed above.
+Provide your authoritative Dietetic & Safety Audit to complete the user's consultation:
 
-Be friendly, concise, accurate, and helpful!"""
+1. **Macronutrient & Energy Evaluation**:
+   - Assess caloric density and macro distribution (protein sufficiency, carbohydrate-to-fiber ratio, saturated vs unsaturated fats).
+2. **🛡️ Allergen & Health Screening**:
+   - Explicitly identify any of the 9 major allergens present: Milk/Dairy, Eggs, Fish, Crustacean Shellfish, Tree Nuts, Peanuts, Wheat/Gluten, Soy, Sesame.
+   - Flag any elevated sodium (>1,000mg/serving), excessive added sugars (>25g), or high saturated fats.
+3. **Clinical & Culinary Optimization**:
+   - Provide 1-2 actionable tips (e.g. pairing Vitamin C for non-heme iron absorption, swapping oils, boosting fiber).
+
+Keep your response authoritative, structured with clear markdown headings, and directly helpful."""
 
 
 # ============================================
-# Graph Nodes
+# Graph Nodes & Routing
 # ============================================
-
 
 def create_agent():
-    """Create and return the compiled agent graph."""
+    """Create and return the compiled multi-node agent graph."""
 
-    # Get tools and bind to LLM
     tools = get_all_tools()
-    llm = ChatGoogleGenerativeAI(
+
+    # LLM for culinary planning and tool orchestration
+    planner_llm = ChatGoogleGenerativeAI(
         model=settings.gemini_model,
         google_api_key=settings.gemini_api_key,
-        temperature=0,
+        temperature=0.1,
     ).bind_tools(tools)
 
-    # --- Node: Agent ---
-    def agent_node(state: AgentState) -> dict:
-        """Process messages and decide on actions."""
+    # LLM for registered dietitian audit
+    auditor_llm = ChatGoogleGenerativeAI(
+        model=settings.gemini_model,
+        google_api_key=settings.gemini_api_key,
+        temperature=0.2,
+    )
+
+    # --- Node 1: Planner (NutriChef) ---
+    def planner_node(state: AgentState) -> dict:
         messages = state["messages"]
+        if len(messages) == 1:
+            messages = [SystemMessage(content=PLANNER_PROMPT)] + messages
 
-        # Add system prompt if this is the start
-        if len(messages) == 1:  # Only user message
-            messages = [SystemMessage(content=SYSTEM_PROMPT)] + messages
-
-        response = llm.invoke(messages)
+        response = planner_llm.invoke(messages)
         return {"messages": [response]}
 
-    # --- Node: Tools ---
+    # --- Node 2: Tools (Execution) ---
     tool_node = ToolNode(tools)
 
-    # --- Routing Logic ---
-    def should_continue(state: AgentState) -> str:
-        """Decide whether to call tools or end."""
-        last_message = state["messages"][-1]
+    # --- Node 3: Auditor (NutriAuditor) ---
+    def auditor_node(state: AgentState) -> dict:
+        messages = state["messages"]
+        audit_context = messages + [SystemMessage(content=AUDITOR_PROMPT)]
+        response = auditor_llm.invoke(audit_context)
+        # Tag response as auditor output
+        response.name = "NutriAuditor"
+        return {"messages": [response]}
 
-        # If LLM wants to call tools, route to tools
+    # --- Routing Logic ---
+    def should_continue_planner(state: AgentState) -> str:
+        """Route to tools if tool calls exist; if recipe calculated, route to auditor; else END."""
+        messages = state["messages"]
+        last_message = messages[-1]
+
+        # 1. If LLM wants to call tools, execute them
         if hasattr(last_message, "tool_calls") and last_message.tool_calls:
             return "tools"
 
-        # Otherwise, we're done
+        # 2. Check if a recipe/meal calculation tool was run and needs dietitian auditing
+        audit_trigger_tools = {"calculate_recipe_nutrition", "analyze_food_image"}
+        has_recipe_tool = any(
+            getattr(m, "name", None) in audit_trigger_tools or
+            any(tc.get("name") in audit_trigger_tools for tc in getattr(m, "tool_calls", []))
+            for m in messages
+        )
+
+        auditor_already_run = any(
+            getattr(m, "name", None) == "NutriAuditor"
+            for m in messages
+        )
+
+        if has_recipe_tool and not auditor_already_run:
+            return "auditor"
+
         return END
 
     # ============================================
-    # Build the Graph
+    # Build Multi-Node Graph
     # ============================================
 
     graph = StateGraph(AgentState)
 
-    # Add nodes
-    graph.add_node("agent", agent_node)
+    # Register nodes
+    graph.add_node("planner", planner_node)
     graph.add_node("tools", tool_node)
+    graph.add_node("auditor", auditor_node)
 
-    # Set entry point
-    graph.set_entry_point("agent")
+    # Entry point
+    graph.set_entry_point("planner")
 
-    # Add edges
-    graph.add_conditional_edges("agent", should_continue, ["tools", END])
-    graph.add_edge("tools", "agent")  # After tools, go back to agent
+    # Edges
+    graph.add_conditional_edges("planner", should_continue_planner, ["tools", "auditor", END])
+    graph.add_edge("tools", "planner")
+    graph.add_edge("auditor", END)
 
-    # Compile with memory
+    # Compile with checkpoint memory
     memory = MemorySaver()
     return graph.compile(checkpointer=memory)
 
@@ -152,21 +180,28 @@ class NutritionAgent:
         if not messages:
             return {"message": "", "image_path": None, "artifacts": []}
 
-        # 1. Extract text from last AI message
-        last_message = messages[-1]
-        raw_content = getattr(last_message, "content", str(last_message))
-        if isinstance(raw_content, list):
-            text_parts = []
-            for part in raw_content:
-                if isinstance(part, dict) and "text" in part:
-                    text_parts.append(part["text"])
-                elif isinstance(part, str):
-                    text_parts.append(part)
+        # 1. Extract text from assistant messages (synthesizing planner and auditor outputs)
+        assistant_texts = []
+        for msg in messages:
+            is_ai = hasattr(msg, "tool_calls") or msg.__class__.__name__ == "AIMessage"
+            if is_ai and not getattr(msg, "tool_calls", None):
+                raw = getattr(msg, "content", "")
+                if isinstance(raw, list):
+                    text_parts = [
+                        p.get("text", str(p)) if isinstance(p, dict) else str(p)
+                        for p in raw
+                    ]
+                    content_str = "\n".join(text_parts).strip()
                 else:
-                    text_parts.append(str(part))
-            response_text = "\n".join(text_parts)
+                    content_str = str(raw).strip()
+                if content_str and content_str not in assistant_texts:
+                    assistant_texts.append(content_str)
+
+        if assistant_texts:
+            response_text = "\n\n".join(assistant_texts)
         else:
-            response_text = str(raw_content)
+            last_message = messages[-1]
+            response_text = str(getattr(last_message, "content", str(last_message)))
 
         # 2. Extract typed tool artifacts from ToolMessages
         artifacts = []
