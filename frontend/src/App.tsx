@@ -22,7 +22,9 @@ function AppContent() {
   const [messages, setMessages] = useState<Message[]>([
     {
       type: 'ai',
-      content: 'Hi! I can help you search for foods in the USDA database, analyze photos of your meals, or create nutrition labels. Try asking me about any recipe or click the 📸 Snap & Scan tab to upload a photo!'
+      content: FEATURES.ENABLE_VISION
+        ? 'Hi! I can help you search for foods in the USDA database, analyze photos of your meals, or create nutrition labels. Try asking me about any recipe or click the 📸 Snap & Scan tab to upload a photo!'
+        : 'Hi! I can help you search for foods in the USDA database and create nutrition labels. Try asking me to "Find avocado and create a nutrition label"!'
     }
   ])
   const [input, setInput] = useState('')
@@ -185,12 +187,14 @@ function AppContent() {
           >
             💬 AI Chat
           </button>
-          <button
-            className={`tab ${activeTab === 'vision' ? 'active' : ''}`}
-            onClick={() => setActiveTab('vision')}
-          >
-            📸 Snap & Scan
-          </button>
+          {FEATURES.ENABLE_VISION && (
+            <button
+              className={`tab ${activeTab === 'vision' ? 'active' : ''}`}
+              onClick={() => setActiveTab('vision')}
+            >
+              📸 Snap & Scan
+            </button>
+          )}
           <button
             className={`tab ${activeTab === 'label' ? 'active' : ''}`}
             onClick={() => setActiveTab('label')}
@@ -261,29 +265,33 @@ function AppContent() {
 
             {/* Input Container */}
             <div className="input-container">
-              <input
-                type="file"
-                ref={chatFileInputRef}
-                style={{ display: 'none' }}
-                accept="image/*"
-                onChange={handleChatImageUpload}
-              />
-              <button
-                type="button"
-                className="upload-icon-btn"
-                onClick={() => chatFileInputRef.current?.click()}
-                title="Upload meal or food photo"
-                style={{
-                  background: '#d4d1b8',
-                  border: '2px solid #3d3d2e',
-                  borderRadius: '12px',
-                  padding: '10px 14px',
-                  fontSize: '18px',
-                  cursor: 'pointer'
-                }}
-              >
-                📷
-              </button>
+              {FEATURES.ENABLE_VISION && (
+                <>
+                  <input
+                    type="file"
+                    ref={chatFileInputRef}
+                    style={{ display: 'none' }}
+                    accept="image/*"
+                    onChange={handleChatImageUpload}
+                  />
+                  <button
+                    type="button"
+                    className="upload-icon-btn"
+                    onClick={() => chatFileInputRef.current?.click()}
+                    title="Upload meal or food photo"
+                    style={{
+                      background: '#d4d1b8',
+                      border: '2px solid #3d3d2e',
+                      borderRadius: '12px',
+                      padding: '10px 14px',
+                      fontSize: '18px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    📷
+                  </button>
+                </>
+              )}
               <input
                 type="text"
                 value={input}
@@ -296,7 +304,7 @@ function AppContent() {
               </button>
             </div>
           </>
-        ) : activeTab === 'vision' ? (
+        ) : activeTab === 'vision' && FEATURES.ENABLE_VISION ? (
           <VisionStudio
             onExportToLabel={handleAnalyzeRecipe}
             onExportToRecipe={() => setActiveTab('recipe')}

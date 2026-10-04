@@ -8,4 +8,11 @@ export const FEATURES = {
    * Can be toggled on via VITE_ENABLE_VOICE=true in .env
    */
   ENABLE_VOICE: import.meta.env.VITE_ENABLE_VOICE === 'true',
+
+  /**
+   * Multimodal vision features: Snap & Scan tab and chat photo uploads.
+   * Disabled by default (false).
+   * Can be toggled on via VITE_ENABLE_VISION=true in .env
+   */
+  ENABLE_VISION: import.meta.env.VITE_ENABLE_VISION === 'true',
 } as const;
