@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import './App.css'
 import { LabelBuilder } from './components/LabelBuilder'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { Login } from './components/Login'
 import { useVoice } from './hooks/useVoice'
 import { RecipeLab } from './components/RecipeLab'
+import { VisionStudio } from './components/VisionStudio'
 import ReactMarkdown from 'react-markdown'
 import { FEATURES } from './config/features'
 
@@ -17,17 +18,18 @@ interface Message {
 function AppContent() {
   const { currentUser, loading: authLoading, logout } = useAuth()
   const { speak } = useVoice()
-  const [activeTab, setActiveTab] = useState<'chat' | 'label' | 'recipe'>('chat')
+  const [activeTab, setActiveTab] = useState<'chat' | 'label' | 'recipe' | 'vision'>('chat')
   const [messages, setMessages] = useState<Message[]>([
     {
       type: 'ai',
-      content: 'Hi! I can help you search for foods in the USDA database and create nutrition labels. Try asking me to "Find avocado and create a nutrition label"!'
+      content: 'Hi! I can help you search for foods in the USDA database, analyze photos of your meals, or create nutrition labels. Try asking me about any recipe or click the 📸 Snap & Scan tab to upload a photo!'
     }
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [threadId] = useState(`user-${Math.random().toString(36).substr(2, 9)}`)
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(FEATURES.ENABLE_VOICE)
+  const chatFileInputRef = useRef<HTMLInputElement>(null)
 
   if (authLoading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>
@@ -82,6 +84,59 @@ function AppContent() {
     }
   }
 
+  const handleChatImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return
+    const file = e.target.files[0]
+
+    const userMsg: Message = {
+      type: 'user',
+      content: `📸 Uploaded image: ${file.name}`
+    }
+    setMessages(prev => [...prev, userMsg])
+    setLoading(true)
+
+    try {
+      const token = await currentUser.getIdToken()
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/vision/meal', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      })
+
+      if (!res.ok) {
+        throw new Error('Meal vision analysis failed')
+      }
+
+      const data = await res.json()
+      const formattedItems = (data.detected_items || [])
+        .map((it: any) => `- **${it.name}**: ${it.quantity} ${it.unit}`)
+        .join('\n')
+
+      const macros = data.recipe_totals || {}
+      const summaryText = `### 🍽️ Detected Meal: ${data.meal_name}\n\n${data.description}\n\n**Visual Ingredients Breakdown:**\n${formattedItems}\n\n**USDA Verified Nutrition Totals:**\n- **Calories**: ${Math.round(macros.calories || 0)} kcal\n- **Protein**: ${(macros.protein || 0).toFixed(1)}g\n- **Carbs**: ${(macros.carbs || 0).toFixed(1)}g\n- **Fat**: ${(macros.fat || 0).toFixed(1)}g\n- **Sodium**: ${Math.round(macros.sodium || 0)}mg`
+
+      setMessages(prev => [...prev, {
+        type: 'ai',
+        content: summaryText
+      }])
+    } catch (err: any) {
+      setMessages(prev => [...prev, {
+        type: 'ai',
+        content: `❌ Error analyzing image: ${err.message}`
+      }])
+    } finally {
+      setLoading(false)
+      if (chatFileInputRef.current) {
+        chatFileInputRef.current.value = ''
+      }
+    }
+  }
+
   const examples = [
     '🥑 Find avocado and create a nutrition label image',
     '🐟 Compare protein content in salmon vs chicken breast',
@@ -129,6 +184,12 @@ function AppContent() {
             onClick={() => setActiveTab('chat')}
           >
             💬 AI Chat
+          </button>
+          <button
+            className={`tab ${activeTab === 'vision' ? 'active' : ''}`}
+            onClick={() => setActiveTab('vision')}
+          >
+            📸 Snap & Scan
           </button>
           <button
             className={`tab ${activeTab === 'label' ? 'active' : ''}`}
@@ -201,6 +262,29 @@ function AppContent() {
             {/* Input Container */}
             <div className="input-container">
               <input
+                type="file"
+                ref={chatFileInputRef}
+                style={{ display: 'none' }}
+                accept="image/*"
+                onChange={handleChatImageUpload}
+              />
+              <button
+                type="button"
+                className="upload-icon-btn"
+                onClick={() => chatFileInputRef.current?.click()}
+                title="Upload meal or food photo"
+                style={{
+                  background: '#d4d1b8',
+                  border: '2px solid #3d3d2e',
+                  borderRadius: '12px',
+                  padding: '10px 14px',
+                  fontSize: '18px',
+                  cursor: 'pointer'
+                }}
+              >
+                📷
+              </button>
+              <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -212,6 +296,11 @@ function AppContent() {
               </button>
             </div>
           </>
+        ) : activeTab === 'vision' ? (
+          <VisionStudio
+            onExportToLabel={handleAnalyzeRecipe}
+            onExportToRecipe={() => setActiveTab('recipe')}
+          />
         ) : activeTab === 'label' ? (
           <LabelBuilder initialData={initialLabelData} />
         ) : (
