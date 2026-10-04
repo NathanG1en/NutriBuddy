@@ -27,3 +27,13 @@ def get_rag_service():
     from backend.services.rag import RAGService
 
     return RAGService()
+
+
+@lru_cache
+def get_vision_service():
+    from backend.services.vision import VisionService
+
+    return VisionService(
+        nutrition_service=get_nutrition_service(),
+        label_service=get_label_service(),
+    )

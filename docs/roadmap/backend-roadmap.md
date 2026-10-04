@@ -68,17 +68,20 @@ Transition the nutrition conversational agent from loose string-matching and pro
 ---
 
 ## 👁️ Track 4: Multimodal Vision Ingestion Pipeline
-* **Status**: 📋 **Planned**
+* **Status**: ✅ **Completed** (Implemented in `feature/multimodal-vision-pipeline`, see [ADR 004](../adr/004-multimodal-vision-pipeline.md))
 * **Engineering Disciplines**: Multimodal AI Engineering, Document OCR / Vision Extraction, Entity Resolution.
 
 ### Objective
 Enable users to capture photos of meals, restaurant menus, handwritten recipes, or packaged food nutrition labels, and automatically convert them into structured nutrition data.
 
-### Key Architecture Components
-1. **Multimodal Ingestion**:
-   - Image upload endpoint supporting photos of plates, ingredient lists, or physical Nutrition Facts panels.
-   - Multimodal prompt extraction using Gemini 2.0 Flash Vision to identify food items, estimated portion sizes, and label values.
+### Delivered Architecture Components
+1. **Multimodal Ingestion & Optimization** (`VisionService`):
+   - Ingests plate and meal photos, validates MIME types, auto-resizes large inputs via Pillow (`LANCZOS`), and structures vision requests to Gemini Vision.
+   - Multimodal prompt extraction using structured Pydantic schemas (`MealVisionExtraction`, `PhysicalLabelExtraction`).
 2. **Entity Resolution & Cross-Validation**:
-   - Resolve extracted visual foods against USDA FoodData Central to validate estimated macros and ingredients.
+   - Resolves extracted visual ingredients against USDA FoodData Central via `NutritionService.calculate_recipe_async` to validate estimated macros and ingredients against standard portion matrices.
 3. **Digital Label Reconstruction**:
-   - Automatically hydrate `LabelBuilder` and `LabelService` from scanned physical labels to generate clean, editable digital FDA labels.
+   - Extracts all printed FDA nutrients from physical packaging and automatically renders a digital FDA Nutrition Facts label image via `LabelService.generate_image`.
+4. **API & Agent Integration**:
+   - Added `POST /api/vision/meal` and `POST /api/vision/label` endpoints to FastAPI.
+   - Added `analyze_food_image` tool to the LangGraph ReAct agent returning typed `meal_vision` artifacts.

@@ -58,6 +58,13 @@ You can help users:
 3. The engine automatically resolves culinary volumetric units, counts, and USDA portions into exact gram weights and aggregates all 15 FDA nutrients.
 4. You can also use `parse_recipe_text` to structure raw recipe inputs.
 5. Use `generate_label_image` with the calculated nutrition result to render a downloadable FDA label.
+## For uploaded meal images & photos:
+1. When a user provides or mentions an uploaded meal image file, use `analyze_food_image` to inspect the dish.
+2. The vision pipeline will detect ingredients, estimate portions, and cross-reference them with USDA FoodData Central.
+
+## For cookbooks and uploaded documents:
+1. Use `search_recipe_knowledge` to retrieve culinary techniques, recipe instructions, and dietary knowledge from the RAG store.
+2. Always attribute your answers to the source documents and page numbers returned.
 
 Be friendly, concise, accurate, and helpful!"""
 
@@ -172,7 +179,7 @@ class NutritionAgent:
                 artifacts.append(artifact)
                 if artifact.get("type") == "label_image":
                     image_path = artifact.get("image_path")
-                elif artifact.get("type") == "recipe_nutrition":
+                elif artifact.get("type") in ("recipe_nutrition", "meal_vision"):
                     exportable = artifact
 
         # Safety fallback: regex search on text if image_path wasn't caught by artifact

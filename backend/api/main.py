@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
 
-from backend.api.routes import chat, recipe, health, voice, rag, recipes, labels
+from backend.api.routes import chat, recipe, health, voice, rag, recipes, labels, vision
 
 
 app = FastAPI(
@@ -44,6 +44,7 @@ app.include_router(voice.router, prefix="/api", tags=["Voice"])
 app.include_router(rag.router, prefix="/api/rag", tags=["RAG"])
 app.include_router(recipes.router, prefix="/api/recipes", tags=["Saved Recipes"])
 app.include_router(labels.router, prefix="/api/labels", tags=["Labels"])
+app.include_router(vision.router, prefix="/api/vision", tags=["Vision"])
 
 
 # --- Static File Serving (Frontend) ---
